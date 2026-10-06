@@ -2,7 +2,7 @@ const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TG = `https://api.telegram.org/bot${TOKEN}`;
 
 // ======================================================
-// ДАННЫЕ ТРЕНЕРОВ
+// ТРЕНЕРЫ
 // ======================================================
 
 const trainers = [
@@ -16,7 +16,7 @@ const trainers = [
       },
       {
         name: "Йога в гамаках",
-        desc: "Практика с использованием гамаков: мобильность, разгрузка и контроль тела."
+        desc: "Практика в гамаках: мобильность, разгрузка и контроль тела."
       }
     ],
     schedule: [
@@ -70,7 +70,7 @@ const trainers = [
       },
       {
         name: "Растяжка",
-        desc: "Гибкость, улучшение осанки и снятие напряжения."
+        desc: "Развитие гибкости, улучшение осанки и снятие напряжения."
       },
       {
         name: "Мышечно-суставная гимнастика",
@@ -110,7 +110,7 @@ const trainers = [
     directions: [
       {
         name: "Силовой тренинг",
-        desc: "Силовая работа для развития мышц и общей физической формы."
+        desc: "Развитие силы, укрепление мышц и улучшение физической формы."
       },
       {
         name: "Кроссфит",
@@ -118,11 +118,11 @@ const trainers = [
       },
       {
         name: "Функционал",
-        desc: "Комплексная тренировка всего тела."
+        desc: "Комплексная функциональная тренировка всего тела."
       },
       {
         name: "Тренажерный зал",
-        desc: "Силовые тренировки с использованием тренажеров и свободных весов."
+        desc: "Силовые тренировки на тренажерах и со свободными весами."
       }
     ],
     schedule: [
@@ -166,7 +166,7 @@ const trainers = [
     directions: [
       {
         name: "Джампинг",
-        desc: "Динамичное кардио на мини-батутах: выносливость, координация и энергия."
+        desc: "Кардио на мини-батутах: выносливость, координация и энергия."
       }
     ],
     schedule: [
@@ -201,7 +201,7 @@ const trainers = [
     directions: [
       {
         name: "Зумба",
-        desc: "Танцевальный фитнес под энергичную музыку: выносливость, координация и настроение."
+        desc: "Танцевальный фитнес: выносливость, координация и отличное настроение."
       }
     ],
     schedule: [
@@ -225,7 +225,9 @@ const hallNames = {
 async function api(method, body) {
   return fetch(`${TG}/${method}`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: {
+      "content-type": "application/json"
+    },
     body: JSON.stringify(body)
   });
 }
@@ -248,8 +250,52 @@ function esc(s = "") {
 }
 
 function shortHall(hall) {
-  if (hall === "GYM") return "ТРЕНАЖЕРНЫЙ ЗАЛ";
+  if (hall === "GYM") return "ТРЕНАЖЕРНЫЙ";
   return `ЗАЛ ${hall}`;
+}
+
+// ======================================================
+// ПЕРЕНОС ТЕКСТА
+// ======================================================
+
+function splitText(text, maxChars) {
+  const words = String(text).split(/\s+/);
+  const lines = [];
+  let current = "";
+
+  for (const word of words) {
+    const test = current
+      ? `${current} ${word}`
+      : word;
+
+    if (test.length > maxChars && current) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = test;
+    }
+  }
+
+  if (current) lines.push(current);
+
+  return lines;
+}
+
+function svgLines(lines, x, y, size, color, weight, gap) {
+  return lines
+    .map(
+      (line, i) => `
+        <text
+          x="${x}"
+          y="${y + i * gap}"
+          fill="${color}"
+          font-family="Arial, Helvetica, sans-serif"
+          font-size="${size}"
+          font-weight="${weight}"
+        >${esc(line)}</text>
+      `
+    )
+    .join("");
 }
 
 // ======================================================
@@ -261,50 +307,40 @@ function makePoster(t, theme = "color", trainerNumber = 1) {
 
   const C = {
     bg: bw ? "#ffffff" : "#090909",
-    surface: bw ? "#f2f2f2" : "#151515",
-    surface2: bw ? "#ffffff" : "#101010",
+    surface: bw ? "#f1f1f1" : "#151515",
+    surface2: bw ? "#fafafa" : "#101010",
     text: bw ? "#050505" : "#ffffff",
-    muted: bw ? "#5c5c5c" : "#b8b8b8",
+    muted: bw ? "#4d4d4d" : "#d0d0d0",
     accent: bw ? "#000000" : "#ff6a00",
-    line: bw ? "#cfcfcf" : "#353535",
+    line: bw ? "#c9c9c9" : "#383838",
     ghost: bw ? "#eeeeee" : "#151515"
   };
 
   const W = 1240;
   const PAD = 72;
 
-  // Компактная высота блоков
-  const dirCount = t.directions.length;
-  const rowCount = t.schedule.length;
+  // ====================================================
+  // НАПРАВЛЕНИЯ
+  // ====================================================
 
   const directionStart = 430;
-  const directionRowH = 112;
 
-  const scheduleTitleY =
-    directionStart + dirCount * directionRowH + 80;
+  const directionData = t.directions.map(d => {
+    const descLines = splitText(d.desc, 65).slice(0, 2);
 
-  const scheduleHeaderY = scheduleTitleY + 58;
-  const scheduleStartY = scheduleHeaderY + 52;
-  const scheduleRowH = 76;
+    return {
+      ...d,
+      descLines,
+      height: descLines.length > 1 ? 132 : 112
+    };
+  });
 
-  const halls = [...new Set(t.schedule.map(x => x.hall))];
+  let currentDirectionY = directionStart;
 
-  const hallsTitleY =
-    scheduleStartY + rowCount * scheduleRowH + 75;
-
-  const hallCardsStartY = hallsTitleY + 55;
-  const hallRows = Math.ceil(halls.length / 2);
-  const hallRowH = 92;
-
-  const contactY =
-    hallCardsStartY + hallRows * hallRowH + 65;
-
-  const H = Math.max(1754, contactY + 300);
-
-  // ---------- направления ----------
-  const directionSvg = t.directions
-    .map((d, i) => {
-      const y = directionStart + i * directionRowH;
+  const directionSvg = directionData
+    .map(d => {
+      const y = currentDirectionY;
+      currentDirectionY += d.height + 16;
 
       return `
         <g>
@@ -312,8 +348,8 @@ function makePoster(t, theme = "color", trainerNumber = 1) {
             x="${PAD}"
             y="${y}"
             width="${W - PAD * 2}"
-            height="94"
-            rx="18"
+            height="${d.height}"
+            rx="20"
             fill="${C.surface}"
             stroke="${C.line}"
             stroke-width="2"
@@ -322,35 +358,47 @@ function makePoster(t, theme = "color", trainerNumber = 1) {
           <rect
             x="${PAD}"
             y="${y}"
-            width="10"
-            height="94"
-            rx="5"
+            width="12"
+            height="${d.height}"
+            rx="6"
             fill="${C.accent}"
           />
 
           <text
-            x="${PAD + 32}"
-            y="${y + 38}"
+            x="${PAD + 38}"
+            y="${y + 44}"
             fill="${C.text}"
             font-family="Arial, Helvetica, sans-serif"
-            font-size="30"
+            font-size="34"
             font-weight="900"
           >${esc(d.name).toUpperCase()}</text>
 
-          <text
-            x="${PAD + 32}"
-            y="${y + 70}"
-            fill="${C.muted}"
-            font-family="Arial, Helvetica, sans-serif"
-            font-size="17"
-            font-weight="600"
-          >${esc(d.desc)}</text>
+          ${svgLines(
+            d.descLines,
+            PAD + 38,
+            y + 82,
+            25,
+            C.muted,
+            700,
+            31
+          )}
         </g>
       `;
     })
     .join("");
 
-  // ---------- расписание ----------
+  const scheduleTitleY = currentDirectionY + 65;
+
+  // ====================================================
+  // РАСПИСАНИЕ
+  // ====================================================
+
+  const scheduleHeaderY = scheduleTitleY + 72;
+  const scheduleStartY = scheduleHeaderY + 55;
+
+  // Строки стали выше, чтобы крупный текст не теснился
+  const scheduleRowH = 88;
+
   let lastDay = "";
 
   const scheduleSvg = t.schedule
@@ -365,11 +413,11 @@ function makePoster(t, theme = "color", trainerNumber = 1) {
             x="${PAD}"
             y="${y}"
             width="${W - PAD * 2}"
-            height="64"
-            rx="14"
+            height="76"
+            rx="16"
             fill="${i % 2 === 0 ? C.surface : C.surface2}"
             stroke="${C.line}"
-            stroke-width="1.5"
+            stroke-width="2"
           />
 
           ${
@@ -377,60 +425,60 @@ function makePoster(t, theme = "color", trainerNumber = 1) {
               ? `
                 <rect
                   x="${PAD + 14}"
-                  y="${y + 8}"
-                  width="82"
-                  height="48"
-                  rx="11"
+                  y="${y + 10}"
+                  width="94"
+                  height="56"
+                  rx="13"
                   fill="${C.accent}"
                 />
 
                 <text
-                  x="${PAD + 55}"
-                  y="${y + 41}"
+                  x="${PAD + 61}"
+                  y="${y + 49}"
                   text-anchor="middle"
                   fill="${bw ? "#ffffff" : "#090909"}"
                   font-family="Arial, Helvetica, sans-serif"
-                  font-size="25"
+                  font-size="31"
                   font-weight="900"
                 >${esc(s.day)}</text>
               `
               : `
                 <line
-                  x1="${PAD + 55}"
+                  x1="${PAD + 61}"
                   y1="${y}"
-                  x2="${PAD + 55}"
-                  y2="${y + 64}"
+                  x2="${PAD + 61}"
+                  y2="${y + 76}"
                   stroke="${C.line}"
-                  stroke-width="2"
+                  stroke-width="3"
                 />
               `
           }
 
           <text
-            x="${PAD + 135}"
-            y="${y + 41}"
+            x="${PAD + 150}"
+            y="${y + 50}"
             fill="${C.text}"
             font-family="Arial, Helvetica, sans-serif"
-            font-size="27"
+            font-size="32"
             font-weight="900"
           >${esc(s.time)}</text>
 
           <text
-            x="${PAD + 345}"
-            y="${y + 40}"
+            x="${PAD + 405}"
+            y="${y + 49}"
             fill="${C.text}"
             font-family="Arial, Helvetica, sans-serif"
-            font-size="22"
-            font-weight="800"
+            font-size="27"
+            font-weight="900"
           >${esc(s.direction).toUpperCase()}</text>
 
           <text
-            x="${W - PAD - 20}"
-            y="${y + 40}"
+            x="${W - PAD - 18}"
+            y="${y + 49}"
             text-anchor="end"
             fill="${C.accent}"
             font-family="Arial, Helvetica, sans-serif"
-            font-size="21"
+            font-size="27"
             font-weight="900"
           >${esc(shortHall(s.hall))}</text>
         </g>
@@ -438,7 +486,21 @@ function makePoster(t, theme = "color", trainerNumber = 1) {
     })
     .join("");
 
-  // ---------- залы ----------
+  // ====================================================
+  // ЗАЛЫ
+  // ====================================================
+
+  const halls = [...new Set(t.schedule.map(x => x.hall))];
+
+  const hallsTitleY =
+    scheduleStartY +
+    t.schedule.length * scheduleRowH +
+    75;
+
+  const hallCardsStartY = hallsTitleY + 65;
+  const hallRowH = 108;
+  const hallRows = Math.ceil(halls.length / 2);
+
   const hallSvg = halls
     .map((hall, i) => {
       const col = i % 2;
@@ -453,34 +515,45 @@ function makePoster(t, theme = "color", trainerNumber = 1) {
             x="${x}"
             y="${y}"
             width="530"
-            height="74"
-            rx="15"
+            height="90"
+            rx="17"
             fill="${C.surface}"
             stroke="${C.line}"
             stroke-width="2"
           />
 
           <text
-            x="${x + 24}"
-            y="${y + 29}"
+            x="${x + 25}"
+            y="${y + 37}"
             fill="${C.accent}"
             font-family="Arial, Helvetica, sans-serif"
-            font-size="20"
+            font-size="26"
             font-weight="900"
           >${esc(shortHall(hall))}</text>
 
           <text
-            x="${x + 24}"
-            y="${y + 56}"
+            x="${x + 25}"
+            y="${y + 69}"
             fill="${C.text}"
             font-family="Arial, Helvetica, sans-serif"
-            font-size="16"
-            font-weight="700"
+            font-size="21"
+            font-weight="800"
           >${esc(hallNames[hall] || "")}</text>
         </g>
       `;
     })
     .join("");
+
+  const contactY =
+    hallCardsStartY +
+    hallRows * hallRowH +
+    60;
+
+  const H = Math.max(1754, contactY + 300);
+
+  // ====================================================
+  // SVG
+  // ====================================================
 
   return `
   <svg
@@ -489,9 +562,15 @@ function makePoster(t, theme = "color", trainerNumber = 1) {
     height="${H}"
     viewBox="0 0 ${W} ${H}"
   >
-    <rect width="${W}" height="${H}" fill="${C.bg}" />
 
-    <!-- Фоновая графика -->
+    <rect
+      width="${W}"
+      height="${H}"
+      fill="${C.bg}"
+    />
+
+    <!-- декоративный ТИТАН -->
+
     <text
       x="1210"
       y="330"
@@ -505,7 +584,7 @@ function makePoster(t, theme = "color", trainerNumber = 1) {
     <path
       d="M970 0 L1240 0 L1240 270 Z"
       fill="${C.accent}"
-      opacity="${bw ? "0.08" : "0.12"}"
+      opacity="${bw ? "0.07" : "0.12"}"
     />
 
     <rect
@@ -517,12 +596,13 @@ function makePoster(t, theme = "color", trainerNumber = 1) {
     />
 
     <!-- ШАПКА -->
+
     <text
       x="${PAD}"
       y="92"
       fill="${C.accent}"
       font-family="Arial, Helvetica, sans-serif"
-      font-size="48"
+      font-size="50"
       font-weight="900"
     >ТИТАН</text>
 
@@ -532,8 +612,8 @@ function makePoster(t, theme = "color", trainerNumber = 1) {
       text-anchor="end"
       fill="${C.muted}"
       font-family="Arial, Helvetica, sans-serif"
-      font-size="18"
-      font-weight="800"
+      font-size="21"
+      font-weight="900"
       letter-spacing="3"
     >ТРЕНЕР • ${String(trainerNumber).padStart(2, "0")}</text>
 
@@ -543,10 +623,11 @@ function makePoster(t, theme = "color", trainerNumber = 1) {
       x2="${W - PAD}"
       y2="125"
       stroke="${C.accent}"
-      stroke-width="4"
+      stroke-width="5"
     />
 
     <!-- ИМЯ -->
+
     <text
       x="${PAD}"
       y="220"
@@ -558,138 +639,143 @@ function makePoster(t, theme = "color", trainerNumber = 1) {
 
     <text
       x="${PAD + 2}"
-      y="267"
+      y="269"
       fill="${C.muted}"
       font-family="Arial, Helvetica, sans-serif"
-      font-size="22"
-      font-weight="800"
+      font-size="25"
+      font-weight="900"
       letter-spacing="3"
     >ГРУППОВЫЕ ТРЕНИРОВКИ</text>
 
-    <!-- номер секции -->
+    <!-- 01 -->
+
     <text
       x="${PAD}"
       y="355"
       fill="${C.accent}"
       font-family="Arial, Helvetica, sans-serif"
-      font-size="18"
+      font-size="21"
       font-weight="900"
     >01</text>
 
     <line
-      x1="${PAD + 48}"
+      x1="${PAD + 52}"
       y1="349"
-      x2="${PAD + 112}"
+      x2="${PAD + 120}"
       y2="349"
       stroke="${C.accent}"
-      stroke-width="3"
+      stroke-width="4"
     />
 
     <text
-      x="${PAD + 135}"
-      y="357"
+      x="${PAD + 145}"
+      y="358"
       fill="${C.text}"
       font-family="Arial, Helvetica, sans-serif"
-      font-size="27"
+      font-size="32"
       font-weight="900"
       letter-spacing="2"
     >НАПРАВЛЕНИЯ</text>
 
     ${directionSvg}
 
-    <!-- РАСПИСАНИЕ -->
+    <!-- 02 -->
+
     <text
       x="${PAD}"
       y="${scheduleTitleY}"
       fill="${C.accent}"
       font-family="Arial, Helvetica, sans-serif"
-      font-size="18"
+      font-size="21"
       font-weight="900"
     >02</text>
 
     <line
-      x1="${PAD + 48}"
-      y1="${scheduleTitleY - 6}"
-      x2="${PAD + 112}"
-      y2="${scheduleTitleY - 6}"
+      x1="${PAD + 52}"
+      y1="${scheduleTitleY - 7}"
+      x2="${PAD + 120}"
+      y2="${scheduleTitleY - 7}"
       stroke="${C.accent}"
-      stroke-width="3"
+      stroke-width="4"
     />
 
     <text
-      x="${PAD + 135}"
-      y="${scheduleTitleY + 2}"
+      x="${PAD + 145}"
+      y="${scheduleTitleY + 3}"
       fill="${C.text}"
       font-family="Arial, Helvetica, sans-serif"
-      font-size="27"
+      font-size="32"
       font-weight="900"
       letter-spacing="2"
     >РАСПИСАНИЕ</text>
+
+    <!-- КРУПНЫЕ ЗАГОЛОВКИ ТАБЛИЦЫ -->
 
     <text
       x="${PAD + 14}"
       y="${scheduleHeaderY}"
       fill="${C.muted}"
       font-family="Arial, Helvetica, sans-serif"
-      font-size="14"
+      font-size="21"
       font-weight="900"
     >ДЕНЬ</text>
 
     <text
-      x="${PAD + 135}"
+      x="${PAD + 150}"
       y="${scheduleHeaderY}"
       fill="${C.muted}"
       font-family="Arial, Helvetica, sans-serif"
-      font-size="14"
+      font-size="21"
       font-weight="900"
     >ВРЕМЯ</text>
 
     <text
-      x="${PAD + 345}"
+      x="${PAD + 405}"
       y="${scheduleHeaderY}"
       fill="${C.muted}"
       font-family="Arial, Helvetica, sans-serif"
-      font-size="14"
+      font-size="21"
       font-weight="900"
     >НАПРАВЛЕНИЕ</text>
 
     <text
-      x="${W - PAD - 20}"
+      x="${W - PAD - 18}"
       y="${scheduleHeaderY}"
       text-anchor="end"
       fill="${C.muted}"
       font-family="Arial, Helvetica, sans-serif"
-      font-size="14"
+      font-size="21"
       font-weight="900"
     >ЗАЛ</text>
 
     ${scheduleSvg}
 
-    <!-- ЗАЛЫ -->
+    <!-- 03 -->
+
     <text
       x="${PAD}"
       y="${hallsTitleY}"
       fill="${C.accent}"
       font-family="Arial, Helvetica, sans-serif"
-      font-size="18"
+      font-size="21"
       font-weight="900"
     >03</text>
 
     <line
-      x1="${PAD + 48}"
-      y1="${hallsTitleY - 6}"
-      x2="${PAD + 112}"
-      y2="${hallsTitleY - 6}"
+      x1="${PAD + 52}"
+      y1="${hallsTitleY - 7}"
+      x2="${PAD + 120}"
+      y2="${hallsTitleY - 7}"
       stroke="${C.accent}"
-      stroke-width="3"
+      stroke-width="4"
     />
 
     <text
-      x="${PAD + 135}"
-      y="${hallsTitleY + 2}"
+      x="${PAD + 145}"
+      y="${hallsTitleY + 3}"
       fill="${C.text}"
       font-family="Arial, Helvetica, sans-serif"
-      font-size="27"
+      font-size="32"
       font-weight="900"
       letter-spacing="2"
     >РАСШИФРОВКА ЗАЛОВ</text>
@@ -697,91 +783,96 @@ function makePoster(t, theme = "color", trainerNumber = 1) {
     ${hallSvg}
 
     <!-- КОНТАКТ -->
+
     <rect
       x="${PAD}"
       y="${contactY}"
       width="${W - PAD * 2}"
-      height="174"
-      rx="22"
+      height="184"
+      rx="23"
       fill="${C.surface}"
       stroke="${C.accent}"
-      stroke-width="3"
+      stroke-width="4"
     />
 
     <text
-      x="${PAD + 30}"
-      y="${contactY + 43}"
+      x="${PAD + 32}"
+      y="${contactY + 45}"
       fill="${C.muted}"
       font-family="Arial, Helvetica, sans-serif"
-      font-size="16"
+      font-size="19"
       font-weight="900"
       letter-spacing="2"
     >ЗАПИСЬ К ТРЕНЕРУ</text>
 
     <text
-      x="${PAD + 30}"
-      y="${contactY + 101}"
+      x="${PAD + 32}"
+      y="${contactY + 106}"
       fill="${C.text}"
       font-family="Arial, Helvetica, sans-serif"
-      font-size="38"
+      font-size="40"
       font-weight="900"
     >${esc(t.phone)}</text>
 
     <text
-      x="${PAD + 30}"
-      y="${contactY + 140}"
+      x="${PAD + 32}"
+      y="${contactY + 150}"
       fill="${C.muted}"
       font-family="Arial, Helvetica, sans-serif"
-      font-size="18"
-      font-weight="700"
+      font-size="21"
+      font-weight="800"
     >г. Сарапул · ул. Советская, 46</text>
 
     <!-- QR -->
+
     <rect
-      x="${W - PAD - 140}"
-      y="${contactY + 22}"
-      width="126"
-      height="126"
-      rx="13"
+      x="${W - PAD - 145}"
+      y="${contactY + 24}"
+      width="132"
+      height="132"
+      rx="14"
       fill="#ffffff"
       stroke="${C.accent}"
-      stroke-width="3"
+      stroke-width="4"
     />
 
     <text
-      x="${W - PAD - 77}"
-      y="${contactY + 96}"
+      x="${W - PAD - 79}"
+      y="${contactY + 102}"
       text-anchor="middle"
       fill="#000000"
       font-family="Arial, Helvetica, sans-serif"
-      font-size="25"
+      font-size="26"
       font-weight="900"
     >QR</text>
 
+    <!-- НИЗ -->
+
     <text
       x="${PAD}"
-      y="${contactY + 232}"
+      y="${contactY + 245}"
       fill="${C.text}"
       font-family="Arial, Helvetica, sans-serif"
-      font-size="20"
+      font-size="22"
       font-weight="900"
       letter-spacing="2"
     >ТИТАН · САРАПУЛ</text>
 
     <line
       x1="${PAD}"
-      y1="${contactY + 258}"
+      y1="${contactY + 272}"
       x2="${W - PAD}"
-      y2="${contactY + 258}"
+      y2="${contactY + 272}"
       stroke="${C.accent}"
-      stroke-width="5"
+      stroke-width="6"
     />
+
   </svg>
   `;
 }
 
 // ======================================================
-// ОТПРАВКА ПОСТЕРА
+// ОТПРАВКА
 // ======================================================
 
 async function sendPoster(chat, trainerIndex, theme) {
@@ -803,25 +894,30 @@ async function sendPoster(chat, trainerIndex, theme) {
 
   form.append(
     "document",
-    new Blob([svg], { type: "image/svg+xml" }),
+    new Blob(
+      [svg],
+      { type: "image/svg+xml" }
+    ),
     `TITAN_${trainer.name.replace(/\s+/g, "_")}_${theme}.svg`
   );
 
   form.append(
     "caption",
-    `${trainer.name}\n${theme === "bw" ? "Ч/Б вариант" : "Цветной вариант"}`
+    `${trainer.name}\n${
+      theme === "bw"
+        ? "Ч/Б вариант"
+        : "Цветной вариант"
+    }`
   );
 
-  const response = await fetch(`${TG}/sendDocument`, {
+  return fetch(`${TG}/sendDocument`, {
     method: "POST",
     body: form
   });
-
-  return response.json();
 }
 
 // ======================================================
-// КЛАВИАТУРЫ
+// КНОПКИ
 // ======================================================
 
 function mainKeyboard() {
@@ -900,7 +996,8 @@ module.exports = async (req, res) => {
     const data = query?.data || "";
     const text = message?.text || "";
 
-    // START
+    // ГЛАВНОЕ МЕНЮ
+
     if (text === "/start" || data === "home") {
       await sendMessage(
         chat,
@@ -911,7 +1008,8 @@ module.exports = async (req, res) => {
       return res.status(200).json({ ok: true });
     }
 
-    // СОЗДАНИЕ
+    // СОЗДАТЬ
+
     if (data === "create") {
       await sendMessage(
         chat,
@@ -939,7 +1037,8 @@ module.exports = async (req, res) => {
       return res.status(200).json({ ok: true });
     }
 
-    // ТЕМА
+    // ВЫБОР ТЕМЫ
+
     if (data.startsWith("theme:")) {
       const theme = data.split(":")[1];
 
@@ -953,6 +1052,7 @@ module.exports = async (req, res) => {
     }
 
     // ГЕНЕРАЦИЯ
+
     if (data.startsWith("poster:")) {
       const parts = data.split(":");
 
@@ -961,7 +1061,9 @@ module.exports = async (req, res) => {
 
       await sendMessage(
         chat,
-        `Готовлю инфографику: ${trainers[trainerIndex]?.name || ""}…`
+        `Готовлю инфографику: ${
+          trainers[trainerIndex]?.name || ""
+        }…`
       );
 
       await sendPoster(
@@ -992,7 +1094,8 @@ module.exports = async (req, res) => {
       return res.status(200).json({ ok: true });
     }
 
-    // СПИСОК ТРЕНЕРОВ
+    // ТРЕНЕРЫ
+
     if (data === "trainers") {
       const list = trainers
         .map(
@@ -1018,10 +1121,11 @@ module.exports = async (req, res) => {
     }
 
     // ОБЩЕЕ РАСПИСАНИЕ
+
     if (data === "week") {
       await sendMessage(
         chat,
-        "Общее расписание будет следующим модулем. Персональные карточки тренеров уже доступны.",
+        "Общее расписание будет следующим модулем.",
         [
           [
             {
