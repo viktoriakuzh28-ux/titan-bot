@@ -2759,7 +2759,13 @@ if (data === "week_bw") {
     ]
   );
 
-  return res.status(200).json({ ok: true });
+    return res.status(200).json({ ok: true });
 }
-    }
-    
+} catch (error) {
+  console.error("WEBHOOK ERROR:", error);
+
+  return res.status(500).json({
+    ok: false,
+    error: "Internal server error"
+  });
+}
