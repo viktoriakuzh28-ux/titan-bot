@@ -2768,4 +2768,5 @@ if (data === "week_bw") {
     ok: false,
     error: "Internal server error"
   });
+    }
 }
