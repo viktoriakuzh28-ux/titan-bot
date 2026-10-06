@@ -150,91 +150,578 @@ function esc(s = "") {
 }
 
 function makePoster(t, theme) {
-  const bw = theme === "bw";
-  const bg = bw ? "#ffffff" : "#0b0b0b";
-  const fg = bw ? "#111111" : "#ffffff";
-  const muted = bw ? "#555555" : "#d8d8d8";
-  const accent = bw ? "#111111" : "#ff6a00";
-  const card = bw ? "#f2f2f2" : "#171717";
-  const line = bw ? "#c7c7c7" : "#333333";
+    const bw = theme === "bw";
 
-  const scheduleRows = t.schedule.map((s, i) => {
-    const y = 720 + i * 62;
-    return `
-      <rect x="80" y="${y}" width="1080" height="50" rx="12"
-            fill="${i % 2 ? card : bg}" stroke="${line}" stroke-width="2"/>
-      <text x="105" y="${y + 33}" fill="${accent}" font-size="25" font-weight="800">${esc(s[0])}</text>
-      <text x="185" y="${y + 33}" fill="${fg}" font-size="25" font-weight="700">${esc(s[1])}</text>
-      <text x="375" y="${y + 33}" fill="${fg}" font-size="23">${esc(s[2])}</text>
-      <text x="1125" y="${y + 33}" fill="${muted}" font-size="21" text-anchor="end">${esc(s[3])}</text>
-    `;
-  }).join("");
+  // ===== ЦВЕТА =====
+  const bg = bw ? "#ffffff" : "#090909";
+  const card = bw ? "#f2f2f2" : "#151515";
+  const card2 = bw ? "#ffffff" : "#101010";
+  const text = bw ? "#000000" : "#ffffff";
+  const muted = bw ? "#555555" : "#b8b8b8";
+  const accent = bw ? "#000000" : "#ff6a00";
+  const line = bw ? "#c8c8c8" : "#353535";
 
-  const dirRows = t.directions.slice(0, 5).map((d, i) => {
-    const y = 365 + i * 62;
-    return `
-      <text x="82" y="${y}" fill="${accent}" font-size="25" font-weight="800">${esc(d[0])}</text>
-      <text x="82" y="${y + 29}" fill="${muted}" font-size="19">${esc(d[1])}</text>
-    `;
-  }).join("");
+  // ===== ДАННЫЕ =====
+  const name = esc(t.name || "ТРЕНЕР");
+  const phone = esc(t.phone || "");
 
-  return `<?xml version="1.0" encoding="UTF-8"?>
-  <svg xmlns="http://www.w3.org/2000/svg" width="1240" height="1754" viewBox="0 0 1240 1754">
-    <rect width="1240" height="1754" fill="${bg}"/>
+  const directions = Array.isArray(t.directions)
+    ? t.directions
+    : Array.isArray(t.activities)
+      ? t.activities
+      : [];
 
-    <rect x="0" y="0" width="1240" height="22" fill="${accent}"/>
+  const schedule = Array.isArray(t.schedule) ? t.schedule : [];
 
-    <text x="80" y="115" fill="${accent}"
-          font-family="Arial, sans-serif" font-size="74" font-weight="900">ТИТАН</text>
+  const hallNames = {
+    "1": "КРОССФИТ / БОКС",
+    "2": "TRX / АНТИГРАВИТИ",
+    "3": "СИЛОВОЙ ТРЕНИНГ",
+    "5": "ЙОГА / АЭРОЙОГА"
+  };
 
-    <text x="80" y="164" fill="${muted}"
-          font-family="Arial, sans-serif" font-size="23" font-weight="700"
-          letter-spacing="5">СПОРТИВНЫЙ КОМПЛЕКС</text>
+  const dayOrder = {
+    "ПН": 1,
+    "ВТ": 2,
+    "СР": 3,
+    "ЧТ": 4,
+    "ПТ": 5,
+    "СБ": 6,
+    "ВС": 7
+  };
 
-    <line x1="80" y1="205" x2="1160" y2="205" stroke="${line}" stroke-width="3"/>
+  const cleanDay = value =>
+    String(value || "")
+      .trim()
+      .toUpperCase()
+      .replace("ПОНЕДЕЛЬНИК", "ПН")
+      .replace("ВТОРНИК", "ВТ")
+      .replace("СРЕДА", "СР")
+      .replace("ЧЕТВЕРГ", "ЧТ")
+      .replace("ПЯТНИЦА", "ПТ")
+      .replace("СУББОТА", "СБ")
+      .replace("ВОСКРЕСЕНЬЕ", "ВС");
 
-    <text x="80" y="278" fill="${fg}"
-          font-family="Arial, sans-serif" font-size="54" font-weight="900">${esc(t.name)}</text>
+  const cleanHall = value => {
+    const raw = String(value || "").trim();
 
-    <text x="82" y="320" fill="${accent}"
-          font-family="Arial, sans-serif" font-size="22" font-weight="800"
-          letter-spacing="3">ГРУППОВЫЕ ТРЕНИРОВКИ</text>
+    if (/тренаж/i.test(raw)) {
+      return {
+        short: "ТРЕНАЖЕРНЫЙ ЗАЛ",
+        key: "gym"
+      };
+    }
 
-    <g font-family="Arial, sans-serif">
-      ${dirRows}
+    const match = raw.match(/\d+/);
+    const n = match ? match[0] : raw;
 
-      <text x="80" y="675" fill="${fg}" font-size="32" font-weight="900">РАСПИСАНИЕ</text>
-      ${scheduleRows}
-    </g>
+    return {
+      short: n ? `ЗАЛ ${n}` : "—",
+      key: n
+    };
+  };
 
-    <g transform="translate(80 1480)">
-      <rect width="1080" height="170" rx="24" fill="${card}" stroke="${line}" stroke-width="2"/>
+  const getDirectionName = d => {
+    if (typeof d === "string") return d;
+    return d?.name || d?.title || d?.direction || "";
+  };
 
-      <text x="35" y="52" fill="${muted}"
-            font-family="Arial, sans-serif" font-size="20" font-weight="700">ЗАПИСЬ К ТРЕНЕРУ</text>
+  const getDirectionDescription = d => {
+    if (typeof d === "string") return "";
+    return d?.description || d?.desc || d?.text || "";
+  };
 
-      <text x="35" y="103" fill="${fg}"
-            font-family="Arial, sans-serif" font-size="35" font-weight="900">${esc(t.phone)}</text>
+  // ===== НАПРАВЛЕНИЯ =====
+  let directionSource = directions;
 
-      <text x="35" y="139" fill="${muted}"
-            font-family="Arial, sans-serif" font-size="18">г. Сарапул · ул. Советская, 46</text>
+  if (!directionSource.length && schedule.length) {
+    const unique = [];
 
-      <rect x="925" y="25" width="120" height="120" rx="12"
-            fill="${bw ? "#fff" : "#fff"}"/>
+    for (const s of schedule) {
+      const n = s.direction || s.activity || s.title || "";
+      if (n && !unique.includes(n)) unique.push(n);
+    }
 
-      <text x="985" y="78" text-anchor="middle"
-            fill="#111" font-family="Arial, sans-serif"
-            font-size="16" font-weight="900">QR</text>
+    directionSource = unique;
+  }
 
-      <text x="985" y="101" text-anchor="middle"
-            fill="#555" font-family="Arial, sans-serif"
-            font-size="11">ЗОНА</text>
-    </g>
+  const directionBlocks = directionSource
+    .slice(0, 5)
+    .map((d, i) => {
+      const dName = esc(getDirectionName(d)).toUpperCase();
+      const dDesc = esc(getDirectionDescription(d));
 
-    <text x="620" y="1710" text-anchor="middle"
-          fill="${muted}" font-family="Arial, sans-serif"
-          font-size="17" letter-spacing="2">ТИТАН · САРАПУЛ</text>
-  </svg>`;
+      const y = 570 + i * 128;
+
+      return `
+        <g>
+          <rect
+            x="90"
+            y="${y}"
+            width="1060"
+            height="104"
+            rx="18"
+            fill="${card}"
+            stroke="${line}"
+            stroke-width="2"
+          />
+
+          <rect
+            x="90"
+            y="${y}"
+            width="10"
+            height="104"
+            rx="5"
+            fill="${accent}"
+          />
+
+          <text
+            x="125"
+            y="${y + 42}"
+            fill="${text}"
+            font-family="Arial, Helvetica, sans-serif"
+            font-size="31"
+            font-weight="900"
+          >${dName}</text>
+
+          ${
+            dDesc
+              ? `
+                <text
+                  x="125"
+                  y="${y + 76}"
+                  fill="${muted}"
+                  font-family="Arial, Helvetica, sans-serif"
+                  font-size="18"
+                  font-weight="500"
+                >${dDesc}</text>
+              `
+              : ""
+          }
+        </g>
+      `;
+    })
+    .join("");
+
+  // ===== РАСПИСАНИЕ =====
+  const normalizedSchedule = schedule
+    .map(s => ({
+      day: cleanDay(s.day || s.weekday),
+      time: String(s.time || "").trim(),
+      direction: String(
+        s.direction || s.activity || s.title || ""
+      ).trim(),
+      hall: cleanHall(s.hall || s.room || "")
+    }))
+    .sort((a, b) => {
+      const dayDiff =
+        (dayOrder[a.day] || 99) - (dayOrder[b.day] || 99);
+
+      if (dayDiff !== 0) return dayDiff;
+
+      return a.time.localeCompare(b.time, "ru");
+    });
+
+  const scheduleStartY =
+    570 + Math.max(directionSource.slice(0, 5).length, 1) * 128 + 125;
+
+  let previousDay = "";
+
+  const scheduleRows = normalizedSchedule
+    .map((s, i) => {
+      const y = scheduleStartY + 95 + i * 82;
+      const showDay = s.day !== previousDay;
+      previousDay = s.day;
+
+      return `
+        <g>
+          <rect
+            x="90"
+            y="${y - 48}"
+            width="1060"
+            height="72"
+            rx="14"
+            fill="${i % 2 === 0 ? card : card2}"
+            stroke="${line}"
+            stroke-width="1.5"
+          />
+
+          ${
+            showDay
+              ? `
+                <rect
+                  x="105"
+                  y="${y - 37}"
+                  width="92"
+                  height="50"
+                  rx="12"
+                  fill="${accent}"
+                />
+
+                <text
+                  x="151"
+                  y="${y - 3}"
+                  text-anchor="middle"
+                  fill="${bw ? "#ffffff" : "#090909"}"
+                  font-family="Arial, Helvetica, sans-serif"
+                  font-size="27"
+                  font-weight="900"
+                >${esc(s.day)}</text>
+              `
+              : ""
+          }
+
+          <text
+            x="245"
+            y="${y}"
+            fill="${text}"
+            font-family="Arial, Helvetica, sans-serif"
+            font-size="29"
+            font-weight="900"
+          >${esc(s.time)}</text>
+
+          <text
+            x="470"
+            y="${y}"
+            fill="${text}"
+            font-family="Arial, Helvetica, sans-serif"
+            font-size="25"
+            font-weight="800"
+          >${esc(s.direction).toUpperCase()}</text>
+
+          <text
+            x="1115"
+            y="${y}"
+            text-anchor="end"
+            fill="${accent}"
+            font-family="Arial, Helvetica, sans-serif"
+            font-size="23"
+            font-weight="900"
+          >${esc(s.hall.short)}</text>
+        </g>
+      `;
+    })
+    .join("");
+
+  // ===== ИСПОЛЬЗУЕМЫЕ ЗАЛЫ =====
+  const usedHalls = [];
+
+  for (const s of normalizedSchedule) {
+    if (
+      s.hall.key &&
+      !usedHalls.some(h => h.key === s.hall.key)
+    ) {
+      usedHalls.push(s.hall);
+    }
+  }
+
+  const hallY =
+    scheduleStartY +
+    120 +
+    Math.max(normalizedSchedule.length, 1) * 82;
+
+  const hallCards = usedHalls
+    .map((h, i) => {
+      const columns = 2;
+      const col = i % columns;
+      const row = Math.floor(i / columns);
+
+      const x = 90 + col * 540;
+      const y = hallY + 95 + row * 105;
+
+      const title =
+        h.key === "gym"
+          ? "ТРЕНАЖЕРНЫЙ ЗАЛ"
+          : `ЗАЛ ${esc(h.key)}`;
+
+      const description =
+        h.key === "gym"
+          ? "ТРЕНАЖЕРНЫЙ ЗАЛ"
+          : hallNames[h.key] || "";
+
+      return `
+        <g>
+          <rect
+            x="${x}"
+            y="${y}"
+            width="520"
+            height="82"
+            rx="16"
+            fill="${card}"
+            stroke="${line}"
+            stroke-width="2"
+          />
+
+          <text
+            x="${x + 25}"
+            y="${y + 33}"
+            fill="${accent}"
+            font-family="Arial, Helvetica, sans-serif"
+            font-size="22"
+            font-weight="900"
+          >${title}</text>
+
+          <text
+            x="${x + 25}"
+            y="${y + 61}"
+            fill="${text}"
+            font-family="Arial, Helvetica, sans-serif"
+            font-size="17"
+            font-weight="700"
+          >${esc(description)}</text>
+        </g>
+      `;
+    })
+    .join("");
+
+  const hallRows = Math.max(
+    1,
+    Math.ceil(usedHalls.length / 2)
+  );
+
+  const contactY = hallY + 125 + hallRows * 105;
+
+  // ===== SVG =====
+  return `
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="1240"
+    height="${Math.max(contactY + 360, 1754)}"
+    viewBox="0 0 1240 ${Math.max(contactY + 360, 1754)}"
+  >
+    <rect
+      width="100%"
+      height="100%"
+      fill="${bg}"
+    />
+
+    <!-- декоративная надпись -->
+    <text
+      x="1180"
+      y="370"
+      text-anchor="end"
+      fill="${bw ? "#eeeeee" : "#171717"}"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="205"
+      font-weight="900"
+    >ТИТАН</text>
+
+    <!-- верхняя оранжевая линия -->
+    <rect
+      x="0"
+      y="0"
+      width="1240"
+      height="18"
+      fill="${accent}"
+    />
+
+    <!-- шапка -->
+    <text
+      x="90"
+      y="115"
+      fill="${accent}"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="56"
+      font-weight="900"
+    >ТИТАН</text>
+
+    <text
+      x="1150"
+      y="108"
+      text-anchor="end"
+      fill="${muted}"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="20"
+      font-weight="800"
+      letter-spacing="3"
+    >ТРЕНЕР • 01</text>
+
+    <line
+      x1="90"
+      y1="150"
+      x2="1150"
+      y2="150"
+      stroke="${accent}"
+      stroke-width="4"
+    />
+
+    <text
+      x="90"
+      y="260"
+      fill="${text}"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="65"
+      font-weight="900"
+    >${name.toUpperCase()}</text>
+
+    <text
+      x="92"
+      y="310"
+      fill="${muted}"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="24"
+      font-weight="800"
+      letter-spacing="3"
+    >ГРУППОВЫЕ ТРЕНИРОВКИ</text>
+
+    <!-- направления -->
+    <text
+      x="90"
+      y="505"
+      fill="${accent}"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="24"
+      font-weight="900"
+      letter-spacing="3"
+    >НАПРАВЛЕНИЯ</text>
+
+    ${directionBlocks}
+
+    <!-- расписание -->
+    <text
+      x="90"
+      y="${scheduleStartY}"
+      fill="${accent}"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="31"
+      font-weight="900"
+      letter-spacing="3"
+    >РАСПИСАНИЕ</text>
+
+    <text
+      x="105"
+      y="${scheduleStartY + 53}"
+      fill="${muted}"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="16"
+      font-weight="800"
+    >ДЕНЬ</text>
+
+    <text
+      x="245"
+      y="${scheduleStartY + 53}"
+      fill="${muted}"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="16"
+      font-weight="800"
+    >ВРЕМЯ</text>
+
+    <text
+      x="470"
+      y="${scheduleStartY + 53}"
+      fill="${muted}"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="16"
+      font-weight="800"
+    >НАПРАВЛЕНИЕ</text>
+
+    <text
+      x="1115"
+      y="${scheduleStartY + 53}"
+      text-anchor="end"
+      fill="${muted}"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="16"
+      font-weight="800"
+    >ЗАЛ</text>
+
+    ${scheduleRows}
+
+    <!-- расшифровка залов -->
+    <text
+      x="90"
+      y="${hallY + 35}"
+      fill="${accent}"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="27"
+      font-weight="900"
+      letter-spacing="2"
+    >РАСШИФРОВКА ЗАЛОВ</text>
+
+    ${hallCards}
+
+    <!-- контакт -->
+    <rect
+      x="90"
+      y="${contactY}"
+      width="1060"
+      height="185"
+      rx="24"
+      fill="${card}"
+      stroke="${accent}"
+      stroke-width="3"
+    />
+
+    <text
+      x="125"
+      y="${contactY + 50}"
+      fill="${muted}"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="18"
+      font-weight="800"
+      letter-spacing="2"
+    >ЗАПИСЬ К ТРЕНЕРУ</text>
+
+    <text
+      x="125"
+      y="${contactY + 108}"
+      fill="${text}"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="40"
+      font-weight="900"
+    >${phone}</text>
+
+    <text
+      x="125"
+      y="${contactY + 150}"
+      fill="${muted}"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="19"
+      font-weight="700"
+    >г. Сарапул · ул. Советская, 46</text>
+
+    <!-- место под QR -->
+    <rect
+      x="970"
+      y="${contactY + 27}"
+      width="130"
+      height="130"
+      rx="12"
+      fill="${bw ? "#ffffff" : "#ffffff"}"
+      stroke="${accent}"
+      stroke-width="3"
+    />
+
+    <text
+      x="1035"
+      y="${contactY + 101}"
+      text-anchor="middle"
+      fill="#000000"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="25"
+      font-weight="900"
+    >QR</text>
+
+    <!-- низ -->
+    <text
+      x="90"
+      y="${contactY + 255}"
+      fill="${text}"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="22"
+      font-weight="900"
+    >ТИТАН · САРАПУЛ</text>
+
+    <line
+      x1="90"
+      y1="${contactY + 280}"
+      x2="1150"
+      y2="${contactY + 280}"
+      stroke="${accent}"
+      stroke-width="5"
+    />
+  </svg>
+  `;
 }
 
 async function sendPoster(chat, trainer, theme) {
