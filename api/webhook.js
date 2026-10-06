@@ -1759,12 +1759,336 @@ function makePoster(t, theme = "color", trainerNumber = 1) {
   </svg>
   `;
 }
+// ==========================================
+// ОБЩЕЕ РАСПИСАНИЕ — ДАННЫЕ
+// ==========================================
 
+async function getWeekSchedule() {
+  const rows = await sql`
+    SELECT
+      s.id,
+      s.day,
+      s.time,
+      s.direction,
+      s.hall,
+      s.sort_order,
+      t.id AS trainer_id,
+      t.name AS trainer_name
+    FROM schedule s
+    JOIN trainers t
+      ON t.id = s.trainer_id
+  `;
+
+  const dayOrder = {
+    "ПН": 1,
+    "ВТ": 2,
+    "СР": 3,
+    "ЧТ": 4,
+    "ПТ": 5,
+    "СБ": 6,
+    "ВС": 7
+  };
+
+  function timeToMinutes(value) {
+    const match = String(value)
+      .match(/(\d{1,2}):(\d{2})/);
+
+    if (!match) return 9999;
+
+    return (
+      Number(match[1]) * 60 +
+      Number(match[2])
+    );
+  }
+
+  return rows.sort((a, b) => {
+    const dayA =
+      dayOrder[a.day] || 99;
+
+    const dayB =
+      dayOrder[b.day] || 99;
+
+    if (dayA !== dayB) {
+      return dayA - dayB;
+    }
+
+    const timeA =
+      timeToMinutes(a.time);
+
+    const timeB =
+      timeToMinutes(b.time);
+
+    if (timeA !== timeB) {
+      return timeA - timeB;
+    }
+
+    return (
+      Number(a.sort_order || 0) -
+      Number(b.sort_order || 0)
+    );
+  });
+}
+
+function groupScheduleByDay(rows) {
+  const days = [
+    "ПН",
+    "ВТ",
+    "СР",
+    "ЧТ",
+    "ПТ",
+    "СБ",
+    "ВС"
+  ];
+
+  return days.map(day => ({
+    day,
+    lessons: rows.filter(
+      item => item.day === day
+    )
+  }));
+}
+// ==========================================
+// ОБЩЕЕ РАСПИСАНИЕ — ИНФОГРАФИКА
+// ==========================================
+
+function makeWeekPoster(rows, theme = "color") {
+  const bw = theme === "bw";
+
+  const C = {
+    bg: bw ? "#ffffff" : "#090909",
+    surface: bw ? "#f2f2f2" : "#151515",
+    text: bw ? "#050505" : "#ffffff",
+    muted: bw ? "#555555" : "#bdbdbd",
+    accent: bw ? "#000000" : "#ff6a00",
+    line: bw ? "#cccccc" : "#333333"
+  };
+
+  const W = 1240;
+  const PAD = 60;
+  const groups = groupScheduleByDay(rows);
+
+  let y = 250;
+  let content = "";
+
+  const fullDay = {
+    "ПН": "ПОНЕДЕЛЬНИК",
+    "ВТ": "ВТОРНИК",
+    "СР": "СРЕДА",
+    "ЧТ": "ЧЕТВЕРГ",
+    "ПТ": "ПЯТНИЦА",
+    "СБ": "СУББОТА",
+    "ВС": "ВОСКРЕСЕНЬЕ"
+  };
+
+  for (const group of groups) {
+    if (!group.lessons.length) continue;
+
+    content += `
+      <text
+        x="${PAD}"
+        y="${y}"
+        fill="${C.accent}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="30"
+        font-weight="900"
+      >${fullDay[group.day]}</text>
+
+      <line
+        x1="${PAD}"
+        y1="${y + 20}"
+        x2="${W - PAD}"
+        y2="${y + 20}"
+        stroke="${C.accent}"
+        stroke-width="4"
+      />
+    `;
+
+    y += 60;
+
+    for (const lesson of group.lessons) {
+      content += `
+        <rect
+          x="${PAD}"
+          y="${y}"
+          width="${W - PAD * 2}"
+          height="92"
+          rx="18"
+          fill="${C.surface}"
+          stroke="${C.line}"
+          stroke-width="2"
+        />
+
+        <text
+          x="${PAD + 24}"
+          y="${y + 56}"
+          fill="${C.accent}"
+          font-family="Arial, Helvetica, sans-serif"
+          font-size="31"
+          font-weight="900"
+        >${esc(lesson.time)}</text>
+
+        <text
+          x="${PAD + 215}"
+          y="${y + 42}"
+          fill="${C.text}"
+          font-family="Arial, Helvetica, sans-serif"
+          font-size="27"
+          font-weight="900"
+        >${esc(lesson.direction)}</text>
+
+        <text
+          x="${PAD + 215}"
+          y="${y + 72}"
+          fill="${C.muted}"
+          font-family="Arial, Helvetica, sans-serif"
+          font-size="20"
+          font-weight="700"
+        >${esc(lesson.trainer_name)}</text>
+
+        <text
+          x="${W - PAD - 24}"
+          y="${y + 56}"
+          text-anchor="end"
+          fill="${C.text}"
+          font-family="Arial, Helvetica, sans-serif"
+          font-size="23"
+          font-weight="900"
+        >${esc(shortHall(lesson.hall))}</text>
+      `;
+
+      y += 108;
+    }
+
+    y += 38;
+  }
+
+  const H = Math.max(1754, y + 190);
+
+  return `
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="${W}"
+      height="${H}"
+      viewBox="0 0 ${W} ${H}"
+    >
+      <rect
+        width="${W}"
+        height="${H}"
+        fill="${C.bg}"
+      />
+
+      <rect
+        x="0"
+        y="0"
+        width="${W}"
+        height="16"
+        fill="${C.accent}"
+      />
+
+      <text
+        x="${PAD}"
+        y="90"
+        fill="${C.accent}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="50"
+        font-weight="900"
+      >ТИТАН</text>
+
+      <text
+        x="${PAD}"
+        y="165"
+        fill="${C.text}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="55"
+        font-weight="900"
+      >ОБЩЕЕ РАСПИСАНИЕ</text>
+
+      <text
+        x="${PAD}"
+        y="205"
+        fill="${C.muted}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="22"
+        font-weight="800"
+        letter-spacing="2"
+      >ГРУППОВЫЕ ТРЕНИРОВКИ</text>
+
+      ${content}
+
+      <text
+        x="${PAD}"
+        y="${H - 80}"
+        fill="${C.muted}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="20"
+        font-weight="800"
+      >г. Сарапул · ул. Советская, 46</text>
+
+      <text
+        x="${W - PAD}"
+        y="${H - 80}"
+        text-anchor="end"
+        fill="${C.accent}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="21"
+        font-weight="900"
+      >ТИТАН · САРАПУЛ</text>
+
+      <line
+        x1="${PAD}"
+        y1="${H - 52}"
+        x2="${W - PAD}"
+        y2="${H - 52}"
+        stroke="${C.accent}"
+        stroke-width="6"
+      />
+    </svg>
+  `;
+}
 // ==========================================
 // ОТПРАВКА ИНФОГРАФИКИ В TELEGRAM
 // ==========================================
 
 async function sendPoster(chat, trainerId, theme) {
+  // ==========================================
+// ОТПРАВКА ОБЩЕГО РАСПИСАНИЯ
+// ==========================================
+
+async function sendWeekPoster(chat, theme = "color") {
+  const rows = await getWeekSchedule();
+  const svg = makeWeekPoster(rows, theme);
+
+  const form = new FormData();
+
+  form.append(
+    "chat_id",
+    String(chat)
+  );
+
+  form.append(
+    "document",
+    new Blob(
+      [svg],
+      { type: "image/svg+xml" }
+    ),
+    "titan-week-schedule.svg"
+  );
+
+  form.append(
+    "caption",
+    theme === "bw"
+      ? "📅 Общее расписание «ТИТАН» — ч/б версия"
+      : "📅 Общее расписание «ТИТАН»"
+  );
+
+  await fetch(
+    `${TG}/sendDocument`,
+    {
+      method: "POST",
+      body: form
+    }
+  );
+}
   const trainer = await getTrainer(trainerId);
 
   if (!trainer) {
@@ -2373,39 +2697,68 @@ module.exports = async (req, res) => {
     // ========================================
     // ОБЩЕЕ РАСПИСАНИЕ
     // ========================================
-
     if (data === "week") {
-      await sendMessage(
-        chat,
-        "📅 Общее расписание подключим следующим модулем.\n\nТеперь данные для него уже хранятся в Neon.",
-        [
-          [
-            {
-              text: "🏠 В меню",
-              callback_data: "home"
-            }
-          ]
-        ]
-      );
+  await sendMessage(
+    chat,
+    "📅 Выберите вариант общего расписания:",
+    [
+      [
+        {
+          text: "🟧 Цветное",
+          callback_data: "week_color"
+        },
+        {
+          text: "⬜ Ч/Б",
+          callback_data: "week_bw"
+        }
+      ],
+      [
+        {
+          text: "🏠 В меню",
+          callback_data: "home"
+        }
+      ]
+    ]
+  );
 
-      return res.status(200).json({ ok: true });
-    }
+  return res.status(200).json({ ok: true });
+}
 
-    // Если пришла неизвестная команда
-    await sendMessage(
-      chat,
-      "Выберите действие:",
-      mainKeyboard()
-    );
+if (data === "week_color") {
+  await sendWeekPoster(chat, "color");
 
-    return res.status(200).json({ ok: true });
+  await sendMessage(
+    chat,
+    "✅ Общее расписание готово.",
+    [
+      [
+        {
+          text: "🏠 В меню",
+          callback_data: "home"
+        }
+      ]
+    ]
+  );
 
-  } catch (error) {
-    console.error("TITAN BOT ERROR:", error);
+  return res.status(200).json({ ok: true });
+}
 
-    return res.status(200).json({
-      ok: false,
-      error: String(error)
-    });
-  }
-};
+if (data === "week_bw") {
+  await sendWeekPoster(chat, "bw");
+
+  await sendMessage(
+    chat,
+    "✅ Общее расписание готово.",
+    [
+      [
+        {
+          text: "🏠 В меню",
+          callback_data: "home"
+        }
+      ]
+    ]
+  );
+
+  return res.status(200).json({ ok: true });
+}
+    
