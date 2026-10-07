@@ -3730,16 +3730,15 @@ function renderScheduleColumn(
       count
     );
 
-
-  const rowHeight =
-    Math.max(
-      minRow,
-      Math.min(
-        maxRow,
-        rawRowHeight
-      )
-    );
-
+const rowHeight =
+  Math.max(
+    16,
+    Math.min(
+      maxRow,
+      rawRowHeight
+    )
+  );
+  
 
   const fontSize =
     single
