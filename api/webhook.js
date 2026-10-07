@@ -3339,12 +3339,6 @@ function renderTrainerDirections(
 
 
   const descSize =
-    compact
-      ? 12
-      : 15;
-
-
-  const descSize =
   compact
     ? 14
     : 19;
