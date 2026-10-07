@@ -2284,6 +2284,82 @@ function makeWeekPoster(
 
   return svg;
 }
+async function sendMultiTrainerPoster(
+  chat,
+  trainerIds,
+  theme = "color"
+) {
+  const trainers =
+    await getTrainersByIds(trainerIds);
+
+  if (!trainers.length) {
+    throw new Error(
+      "Не найдены выбранные тренеры"
+    );
+  }
+
+  if (trainers.length !== trainerIds.length) {
+    throw new Error(
+      "Не удалось загрузить всех выбранных тренеров"
+    );
+  }
+
+  const svg =
+    makeMultiTrainerPoster(
+      trainers,
+      theme
+    );
+
+  const safeNames = trainers
+    .map(t => t.name)
+    .join("_")
+    .replace(/[^\p{L}\p{N}_-]+/gu, "_");
+
+  const filename =
+    `TITAN_${safeNames}_${theme}.svg`;
+
+  const form = new FormData();
+
+  form.append(
+    "chat_id",
+    String(chat)
+  );
+
+  form.append(
+    "document",
+    new Blob(
+      [svg],
+      {
+        type: "image/svg+xml"
+      }
+    ),
+    filename
+  );
+
+  form.append(
+    "caption",
+    "🖼 ТИТАН — инфографика тренеров"
+  );
+
+  const response = await fetch(
+    `${TG}/sendDocument`,
+    {
+      method: "POST",
+      body: form
+    }
+  );
+
+  if (!response.ok) {
+    const body =
+      await response.text();
+
+    throw new Error(
+      `Telegram sendDocument error: ${response.status} ${body}`
+    );
+  }
+
+  return response;
+}
 
 // ==========================================
 // ОТПРАВКА ОБЩЕГО РАСПИСАНИЯ
