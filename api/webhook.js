@@ -1766,126 +1766,118 @@ function groupScheduleByDay(rows) {
 // ОБЩЕЕ РАСПИСАНИЕ — ИНФОГРАФИКА
 // ==========================================
 
-function makeWeekPoster(rows, theme = "color") {
+function makeWeekPoster(
+  rows,
+  theme = "color"
+) {
   const bw = theme === "bw";
 
   const C = {
     bg: bw ? "#ffffff" : "#090909",
-    surface: bw ? "#f2f2f2" : "#151515",
+    surface: bw ? "#f3f3f3" : "#151515",
+    surface2: bw ? "#fafafa" : "#101010",
     text: bw ? "#050505" : "#ffffff",
     muted: bw ? "#555555" : "#bdbdbd",
     accent: bw ? "#000000" : "#ff6a00",
-    line: bw ? "#cccccc" : "#333333"
+    line: bw ? "#cccccc" : "#333333",
+    ghost: bw ? "#eeeeee" : "#151515"
   };
 
   const W = 1240;
   const PAD = 60;
-  const groups = groupScheduleByDay(rows);
 
-  let y = 250;
-  let content = "";
-
-  const fullDay = {
-    "ПН": "ПОНЕДЕЛЬНИК",
-    "ВТ": "ВТОРНИК",
-    "СР": "СРЕДА",
-    "ЧТ": "ЧЕТВЕРГ",
-    "ПТ": "ПЯТНИЦА",
-    "СБ": "СУББОТА",
-    "ВС": "ВОСКРЕСЕНЬЕ"
+  const dayOrder = {
+    ПН: 1,
+    ВТ: 2,
+    СР: 3,
+    ЧТ: 4,
+    ПТ: 5,
+    СБ: 6,
+    ВС: 7
   };
 
-  for (const group of groups) {
-    if (!group.lessons.length) continue;
+  // ========================================
+  // СОРТИРОВКА
+  // ========================================
 
-    content += `
-      <text
-        x="${PAD}"
-        y="${y}"
-        fill="${C.accent}"
-        font-family="Arial, Helvetica, sans-serif"
-        font-size="30"
-        font-weight="900"
-      >${fullDay[group.day]}</text>
+  const sortedRows = [...rows].sort(
+    (a, b) => {
+      const dayDiff =
+        (dayOrder[a.day] || 99) -
+        (dayOrder[b.day] || 99);
 
-      <line
-        x1="${PAD}"
-        y1="${y + 20}"
-        x2="${W - PAD}"
-        y2="${y + 20}"
-        stroke="${C.accent}"
-        stroke-width="4"
-      />
-    `;
+      if (dayDiff !== 0) {
+        return dayDiff;
+      }
 
-    y += 60;
+      return String(a.time || "")
+        .localeCompare(
+          String(b.time || "")
+        );
+    }
+  );
 
-    for (const lesson of group.lessons) {
-      content += `
-        <rect
-          x="${PAD}"
-          y="${y}"
-          width="${W - PAD * 2}"
-          height="92"
-          rx="18"
-          fill="${C.surface}"
-          stroke="${C.line}"
-          stroke-width="2"
-        />
+  // ========================================
+  // ГРУППИРОВКА ПО ДНЯМ
+  // ========================================
 
-        <text
-          x="${PAD + 24}"
-          y="${y + 56}"
-          fill="${C.accent}"
-          font-family="Arial, Helvetica, sans-serif"
-          font-size="31"
-          font-weight="900"
-        >${esc(lesson.time)}</text>
+  const grouped = {};
 
-        <text
-          x="${PAD + 215}"
-          y="${y + 42}"
-          fill="${C.text}"
-          font-family="Arial, Helvetica, sans-serif"
-          font-size="27"
-          font-weight="900"
-        >${esc(lesson.direction)}</text>
-
-        <text
-          x="${PAD + 215}"
-          y="${y + 72}"
-          fill="${C.muted}"
-          font-family="Arial, Helvetica, sans-serif"
-          font-size="20"
-          font-weight="700"
-        >${esc(lesson.trainer_name)}</text>
-
-        <text
-          x="${W - PAD - 24}"
-          y="${y + 56}"
-          text-anchor="end"
-          fill="${C.text}"
-          font-family="Arial, Helvetica, sans-serif"
-          font-size="23"
-          font-weight="900"
-        >${esc(shortHall(lesson.hall))}</text>
-      `;
-
-      y += 108;
+  sortedRows.forEach(row => {
+    if (!grouped[row.day]) {
+      grouped[row.day] = [];
     }
 
-    y += 38;
+    grouped[row.day].push(row);
+  });
+
+  const days = Object.keys(grouped)
+    .sort(
+      (a, b) =>
+        (dayOrder[a] || 99) -
+        (dayOrder[b] || 99)
+    );
+
+  // ========================================
+  // РАСЧЕТ ВЫСОТЫ
+  // ========================================
+
+  const HEADER_H = 265;
+
+  let scheduleHeight = 0;
+
+  days.forEach(day => {
+    scheduleHeight +=
+      70 +
+      grouped[day].length * 58 +
+      28;
+  });
+
+  if (!days.length) {
+    scheduleHeight = 180;
   }
 
-  const H = Math.max(1754, y + 190);
+  const HALLS_H = 210;
+  const FOOTER_H = 120;
 
-  return `
+  const H =
+    HEADER_H +
+    scheduleHeight +
+    HALLS_H +
+    FOOTER_H;
+
+  // ========================================
+  // ШАПКА
+  // ========================================
+
+  let svg = `
     <svg
       xmlns="http://www.w3.org/2000/svg"
       width="${W}"
       height="${H}"
       viewBox="0 0 ${W} ${H}"
     >
+
       <rect
         width="${W}"
         height="${H}"
@@ -1901,8 +1893,18 @@ function makeWeekPoster(rows, theme = "color") {
       />
 
       <text
+        x="${W - PAD}"
+        y="220"
+        text-anchor="end"
+        fill="${C.ghost}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="190"
+        font-weight="900"
+      >ТИТАН</text>
+
+      <text
         x="${PAD}"
-        y="90"
+        y="82"
         fill="${C.accent}"
         font-family="Arial, Helvetica, sans-serif"
         font-size="50"
@@ -1910,138 +1912,377 @@ function makeWeekPoster(rows, theme = "color") {
       >ТИТАН</text>
 
       <text
-        x="${PAD}"
-        y="165"
-        fill="${C.text}"
+        x="${W - PAD}"
+        y="80"
+        text-anchor="end"
+        fill="${C.muted}"
         font-family="Arial, Helvetica, sans-serif"
-        font-size="55"
+        font-size="20"
         font-weight="900"
+        letter-spacing="3"
       >ОБЩЕЕ РАСПИСАНИЕ</text>
+
+      <line
+        x1="${PAD}"
+        y1="112"
+        x2="${W - PAD}"
+        y2="112"
+        stroke="${C.accent}"
+        stroke-width="5"
+      />
 
       <text
         x="${PAD}"
-        y="205"
+        y="180"
+        fill="${C.text}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="52"
+        font-weight="900"
+      >РАСПИСАНИЕ «ТИТАН»</text>
+
+      <text
+        x="${PAD}"
+        y="220"
         fill="${C.muted}"
         font-family="Arial, Helvetica, sans-serif"
         font-size="22"
         font-weight="800"
         letter-spacing="2"
       >ГРУППОВЫЕ ТРЕНИРОВКИ</text>
+  `;
 
-      ${content}
+  let y = HEADER_H;
+
+  // ========================================
+  // РАСПИСАНИЕ ПО ДНЯМ
+  // ========================================
+
+  if (!days.length) {
+    svg += `
+      <rect
+        x="${PAD}"
+        y="${y}"
+        width="${W - PAD * 2}"
+        height="120"
+        rx="22"
+        fill="${C.surface}"
+        stroke="${C.line}"
+        stroke-width="2"
+      />
 
       <text
-        x="${PAD}"
-        y="${H - 80}"
+        x="${W / 2}"
+        y="${y + 70}"
+        text-anchor="middle"
         fill="${C.muted}"
         font-family="Arial, Helvetica, sans-serif"
-        font-size="20"
+        font-size="25"
         font-weight="800"
-      >г. Сарапул · ул. Советская, 46</text>
+      >Расписание пока не добавлено</text>
+    `;
+
+    y += 150;
+  }
+
+  days.forEach(day => {
+    const dayRows = grouped[day];
+
+    // ======================================
+    // НАЗВАНИЕ ДНЯ
+    // ======================================
+
+    svg += `
+      <rect
+        x="${PAD}"
+        y="${y}"
+        width="${W - PAD * 2}"
+        height="54"
+        rx="16"
+        fill="${C.accent}"
+      />
 
       <text
-        x="${W - PAD}"
-        y="${H - 80}"
-        text-anchor="end"
-        fill="${C.accent}"
+        x="${PAD + 26}"
+        y="${y + 36}"
+        fill="${
+          bw
+            ? "#ffffff"
+            : "#050505"
+        }"
         font-family="Arial, Helvetica, sans-serif"
-        font-size="21"
+        font-size="24"
         font-weight="900"
-      >ТИТАН · САРАПУЛ</text>
+      >${esc(day)}</text>
+    `;
 
-      <line
-        x1="${PAD}"
-        y1="${H - 52}"
-        x2="${W - PAD}"
-        y2="${H - 52}"
-        stroke="${C.accent}"
-        stroke-width="6"
+    y += 66;
+
+    // ======================================
+    // ШАПКА ТАБЛИЦЫ
+    // ======================================
+
+    svg += `
+      <rect
+        x="${PAD}"
+        y="${y}"
+        width="${W - PAD * 2}"
+        height="44"
+        rx="10"
+        fill="${C.surface}"
+        stroke="${C.line}"
+        stroke-width="2"
       />
+
+      <text
+        x="${PAD + 24}"
+        y="${y + 29}"
+        fill="${C.muted}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="16"
+        font-weight="900"
+        letter-spacing="1"
+      >ВРЕМЯ</text>
+
+      <text
+        x="${PAD + 175}"
+        y="${y + 29}"
+        fill="${C.muted}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="16"
+        font-weight="900"
+        letter-spacing="1"
+      >НАПРАВЛЕНИЕ</text>
+
+      <text
+        x="${PAD + 650}"
+        y="${y + 29}"
+        fill="${C.muted}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="16"
+        font-weight="900"
+        letter-spacing="1"
+      >ТРЕНЕР</text>
+
+      <text
+        x="${W - PAD - 24}"
+        y="${y + 29}"
+        text-anchor="end"
+        fill="${C.muted}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="16"
+        font-weight="900"
+        letter-spacing="1"
+      >ЗАЛ</text>
+    `;
+
+    y += 52;
+
+    // ======================================
+    // СТРОКИ
+    // ======================================
+
+    dayRows.forEach(
+      (row, index) => {
+        const trainerName =
+          row.trainer_name ||
+          row.trainer ||
+          row.name ||
+          "";
+
+        svg += `
+          <rect
+            x="${PAD}"
+            y="${y}"
+            width="${W - PAD * 2}"
+            height="50"
+            rx="10"
+            fill="${
+              index % 2 === 0
+                ? C.surface2
+                : C.surface
+            }"
+            stroke="${C.line}"
+            stroke-width="1"
+          />
+
+          <text
+            x="${PAD + 24}"
+            y="${y + 32}"
+            fill="${C.accent}"
+            font-family="Arial, Helvetica, sans-serif"
+            font-size="21"
+            font-weight="900"
+          >${esc(
+            row.time || ""
+          )}</text>
+
+          <text
+            x="${PAD + 175}"
+            y="${y + 32}"
+            fill="${C.text}"
+            font-family="Arial, Helvetica, sans-serif"
+            font-size="19"
+            font-weight="800"
+          >${esc(
+            row.direction || ""
+          )}</text>
+
+          <text
+            x="${PAD + 650}"
+            y="${y + 32}"
+            fill="${C.text}"
+            font-family="Arial, Helvetica, sans-serif"
+            font-size="18"
+            font-weight="800"
+          >${esc(
+            trainerName
+          )}</text>
+
+          <text
+            x="${W - PAD - 24}"
+            y="${y + 32}"
+            text-anchor="end"
+            fill="${C.accent}"
+            font-family="Arial, Helvetica, sans-serif"
+            font-size="18"
+            font-weight="900"
+          >${esc(
+            shortHall(
+              row.hall
+            )
+          )}</text>
+        `;
+
+        y += 58;
+      }
+    );
+
+    y += 28;
+  });
+
+  // ========================================
+  // ЗАЛЫ
+  // ========================================
+
+  const hallsY = y + 5;
+
+  svg += `
+    <rect
+      x="${PAD}"
+      y="${hallsY}"
+      width="${W - PAD * 2}"
+      height="165"
+      rx="22"
+      fill="${C.surface}"
+      stroke="${C.line}"
+      stroke-width="2"
+    />
+
+    <text
+      x="${PAD + 30}"
+      y="${hallsY + 42}"
+      fill="${C.accent}"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="22"
+      font-weight="900"
+      letter-spacing="2"
+    >ЗАЛЫ «ТИТАН»</text>
+
+    <text
+      x="${PAD + 30}"
+      y="${hallsY + 78}"
+      fill="${C.text}"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="20"
+      font-weight="800"
+    >ЗАЛ 1 — ${esc(
+      hallNames["1"]
+    )}</text>
+
+    <text
+      x="${PAD + 30}"
+      y="${hallsY + 112}"
+      fill="${C.text}"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="20"
+      font-weight="800"
+    >ЗАЛ 2 — ${esc(
+      hallNames["2"]
+    )}</text>
+
+    <text
+      x="${PAD + 600}"
+      y="${hallsY + 78}"
+      fill="${C.text}"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="20"
+      font-weight="800"
+    >ЗАЛ 3 — ${esc(
+      hallNames["3"]
+    )}</text>
+
+    <text
+      x="${PAD + 600}"
+      y="${hallsY + 112}"
+      fill="${C.text}"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="20"
+      font-weight="800"
+    >ЗАЛ 5 — ${esc(
+      hallNames["5"]
+    )}</text>
+
+    <text
+      x="${PAD + 30}"
+      y="${hallsY + 145}"
+      fill="${C.text}"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="20"
+      font-weight="800"
+    >ТРЕНАЖЕРНЫЙ ЗАЛ — ${esc(
+      hallNames.GYM
+    )}</text>
+  `;
+
+  // ========================================
+  // ФУТЕР
+  // ========================================
+
+  const footerY = H - 70;
+
+  svg += `
+    <text
+      x="${PAD}"
+      y="${footerY}"
+      fill="${C.muted}"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="20"
+      font-weight="800"
+    >г. Сарапул · ул. Советская, 46</text>
+
+    <text
+      x="${W - PAD}"
+      y="${footerY}"
+      text-anchor="end"
+      fill="${C.accent}"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="22"
+      font-weight="900"
+    >ТИТАН · САРАПУЛ</text>
+
+    <line
+      x1="${PAD}"
+      y1="${footerY + 25}"
+      x2="${W - PAD}"
+      y2="${footerY + 25}"
+      stroke="${C.accent}"
+      stroke-width="6"
+    />
+
     </svg>
   `;
-}
-// ==========================================
-// ОТПРАВКА ИНФОГРАФИКИ ТРЕНЕРОВ
-// ==========================================
 
-async function sendMultiTrainerPoster(
-  chat,
-  trainerIds,
-  theme = "color"
-) {
-  const trainers =
-    await getTrainersByIds(trainerIds);
-
-  if (!trainers.length) {
-    throw new Error(
-      "Не найдены выбранные тренеры"
-    );
-  }
-
-  if (trainers.length !== trainerIds.length) {
-    throw new Error(
-      "Не удалось загрузить всех выбранных тренеров"
-    );
-  }
-
-  const svg =
-    makeMultiTrainerPoster(
-      trainers,
-      theme
-    );
-
-  const safeNames = trainers
-    .map(t => t.name)
-    .join("_")
-    .replace(/[^\p{L}\p{N}_-]+/gu, "_");
-
-  const filename =
-    `TITAN_${safeNames}_${theme}.svg`;
-
-  const form = new FormData();
-
-  form.append(
-    "chat_id",
-    String(chat)
-  );
-
-  form.append(
-    "document",
-    new Blob(
-      [svg],
-      {
-        type: "image/svg+xml"
-      }
-    ),
-    filename
-  );
-
-  form.append(
-    "caption",
-    `🖼 ТИТАН — инфографика тренеров\n\n` +
-    trainers
-      .map(t => `${t.name} — ${t.phone || "без телефона"}`)
-      .join("\n")
-  );
-
-  const response =
-    await fetch(
-      `${TG}/sendDocument`,
-      {
-        method: "POST",
-        body: form
-      }
-    );
-
-  if (!response.ok) {
-    const body = await response.text();
-
-    throw new Error(
-      `Telegram sendDocument error: ${response.status} ${body}`
-    );
-  }
-
-  return response;
+  return svg;
 }
 
 // ==========================================
