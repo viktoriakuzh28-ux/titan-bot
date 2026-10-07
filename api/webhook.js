@@ -1,34 +1,73 @@
-const { neon } = require("@neondatabase/serverless");
+const {
+  neon
+} = require("@neondatabase/serverless");
 
-const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const TG = `https://api.telegram.org/bot${TOKEN}`;
-const sql = neon(process.env.DATABASE_URL);
+const TOKEN =
+  process.env.TELEGRAM_BOT_TOKEN;
+
+const TG =
+  `https://api.telegram.org/bot${TOKEN}`;
+
+const sql =
+  neon(process.env.DATABASE_URL);
+
 
 // ==========================================
-// TELEGRAM
+// TELEGRAM API
 // ==========================================
 
 async function api(method, body) {
-  return fetch(`${TG}/${method}`, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json"
-    },
-    body: JSON.stringify(body)
-  });
+  const response = await fetch(
+    `${TG}/${method}`,
+    {
+      method: "POST",
+      headers: {
+        "content-type":
+          "application/json"
+      },
+      body: JSON.stringify(body)
+    }
+  );
+
+  if (!response.ok) {
+    const text =
+      await response.text();
+
+    throw new Error(
+      `Telegram API ${method}: ` +
+      `${response.status} ${text}`
+    );
+  }
+
+  return response.json();
 }
 
-async function sendMessage(chat, text, keyboard) {
-  return api("sendMessage", {
-    chat_id: chat,
-    text,
-    reply_markup: keyboard
-      ? {
-          inline_keyboard: keyboard
-        }
-      : undefined
-  });
+
+async function sendMessage(
+  chat,
+  text,
+  keyboard = null
+) {
+  return api(
+    "sendMessage",
+    {
+      chat_id: chat,
+      text,
+      reply_markup:
+        keyboard
+          ? {
+              inline_keyboard:
+                keyboard
+            }
+          : undefined
+    }
+  );
 }
+
+
+// ==========================================
+// SVG ESCAPE
+// ==========================================
 
 function esc(value = "") {
   return String(value)
@@ -37,11 +76,13 @@ function esc(value = "") {
     .replace(/>/g, "&gt;");
 }
 
+
 // ==========================================
-// СОЗДАНИЕ ТАБЛИЦ
+// СОЗДАНИЕ ТАБЛИЦ NEON
 // ==========================================
 
 async function initDatabase() {
+
   await sql`
     CREATE TABLE IF NOT EXISTS trainers (
       id SERIAL PRIMARY KEY,
@@ -51,52 +92,74 @@ async function initDatabase() {
     )
   `;
 
+
   await sql`
     CREATE TABLE IF NOT EXISTS directions (
       id SERIAL PRIMARY KEY,
+
       trainer_id INTEGER NOT NULL
         REFERENCES trainers(id)
         ON DELETE CASCADE,
+
       name TEXT NOT NULL,
+
       description TEXT DEFAULT '',
+
       sort_order INTEGER DEFAULT 0
     )
   `;
+
 
   await sql`
     CREATE TABLE IF NOT EXISTS schedule (
       id SERIAL PRIMARY KEY,
+
       trainer_id INTEGER NOT NULL
         REFERENCES trainers(id)
         ON DELETE CASCADE,
+
       day TEXT NOT NULL,
+
       time TEXT NOT NULL,
+
       direction TEXT NOT NULL,
+
       hall TEXT NOT NULL,
+
       sort_order INTEGER DEFAULT 0
     )
   `;
 
+
   await sql`
     CREATE TABLE IF NOT EXISTS bot_state (
       chat_id BIGINT PRIMARY KEY,
+
       action TEXT,
+
       trainer_id INTEGER,
+
       schedule_id INTEGER,
-      data JSONB DEFAULT '{}'::jsonb
+
+      data JSONB
+        DEFAULT '{}'::jsonb
     )
   `;
 
-  const result = await sql`
-    SELECT COUNT(*)::int AS count
-    FROM trainers
-  `;
 
-  if (Number(result[0].count) === 0) {
+  const result =
+    await sql`
+      SELECT COUNT(*)::int AS count
+      FROM trainers
+    `;
+
+
+  if (
+    Number(result[0].count) === 0
+  ) {
     await seedDatabase();
   }
 }
-
 // ==========================================
 // СТАРТОВЫЕ ДАННЫЕ ТРЕНЕРОВ
 // ==========================================
@@ -106,185 +169,479 @@ async function seedDatabase() {
     {
       name: "Жижина Эльвира",
       phone: "+7 (904) 278-52-01",
+
       directions: [
-        ["Хатха-йога",
-         "Спокойная практика: гибкость, укрепление тела и снятие стресса."],
-        ["Йога в гамаках",
-         "Практика в гамаках: мобильность, разгрузка и контроль тела."]
+        [
+          "Хатха-йога",
+          "Спокойная практика: гибкость, укрепление тела и снятие стресса."
+        ],
+        [
+          "Йога в гамаках",
+          "Практика в гамаках: мобильность, разгрузка и контроль тела."
+        ]
       ],
+
       schedule: [
-        ["СР", "07:30", "Хатха-йога", "5"],
-        ["СР", "09:00", "Йога в гамаках", "2"],
-        ["ПТ", "07:30", "Хатха-йога", "5"],
-        ["ПТ", "09:00", "Йога в гамаках", "2"]
+        [
+          "СР",
+          "07:30",
+          "Хатха-йога",
+          "5"
+        ],
+        [
+          "СР",
+          "09:00",
+          "Йога в гамаках",
+          "2"
+        ],
+        [
+          "ПТ",
+          "07:30",
+          "Хатха-йога",
+          "5"
+        ],
+        [
+          "ПТ",
+          "09:00",
+          "Йога в гамаках",
+          "2"
+        ]
       ]
     },
 
     {
       name: "Фролова Екатерина",
       phone: "+7 (988) 095-26-91",
+
       directions: [
-        ["Кундалини-йога",
-         "Практика для развития осознанности и гармонизации тела и ума."]
+        [
+          "Кундалини-йога",
+          "Практика для развития осознанности и гармонизации тела и ума."
+        ]
       ],
+
       schedule: [
-        ["СБ", "08:00", "Кундалини-йога", "5"]
+        [
+          "СБ",
+          "08:00",
+          "Кундалини-йога",
+          "5"
+        ]
       ]
     },
 
     {
       name: "Зорина Анна",
       phone: "+7 912 855-31-91",
+
       directions: [
-        ["Кундалини-йога",
-         "Практика для развития осознанности и гармонизации тела и ума."]
+        [
+          "Кундалини-йога",
+          "Практика для развития осознанности и гармонизации тела и ума."
+        ]
       ],
+
       schedule: [
-        ["ПН", "09:00", "Кундалини-йога", "5"],
-        ["ВС", "15:00–19:00", "Кундалини-йога", "2"]
+        [
+          "ПН",
+          "09:00",
+          "Кундалини-йога",
+          "5"
+        ],
+        [
+          "ВС",
+          "15:00–19:00",
+          "Кундалини-йога",
+          "2"
+        ]
       ]
     },
 
     {
       name: "Чупина Светлана",
       phone: "+7 982 828-38-27",
+
       directions: [
-        ["TRX",
-         "Функциональные тренировки с собственным весом."],
-        ["Силовой фитнес",
-         "Укрепление мышц и повышение выносливости."],
-        ["Растяжка",
-         "Развитие гибкости, улучшение осанки и снятие напряжения."],
-        ["Мышечно-суставная гимнастика",
-         "Здоровье суставов, подвижность и профилактика травм."],
-        ["Фитнес-йога",
-         "Силовые упражнения, растяжка и дыхательные практики."]
+        [
+          "TRX",
+          "Функциональные тренировки с собственным весом."
+        ],
+        [
+          "Силовой фитнес",
+          "Укрепление мышц и повышение выносливости."
+        ],
+        [
+          "Растяжка",
+          "Развитие гибкости, улучшение осанки и снятие напряжения."
+        ],
+        [
+          "Мышечно-суставная гимнастика",
+          "Здоровье суставов, подвижность и профилактика травм."
+        ],
+        [
+          "Фитнес-йога",
+          "Силовые упражнения, растяжка и дыхательные практики."
+        ]
       ],
+
       schedule: [
-        ["ПН", "17:00", "TRX", "2"],
-        ["ПН", "18:00", "Силовой фитнес", "3"],
-        ["ПН", "19:00", "Растяжка", "3"],
-        ["ПН", "20:00", "Фитнес-йога", "2"],
+        [
+          "ПН",
+          "17:00",
+          "TRX",
+          "2"
+        ],
+        [
+          "ПН",
+          "18:00",
+          "Силовой фитнес",
+          "3"
+        ],
+        [
+          "ПН",
+          "19:00",
+          "Растяжка",
+          "3"
+        ],
+        [
+          "ПН",
+          "20:00",
+          "Фитнес-йога",
+          "2"
+        ],
 
-        ["ВТ", "09:00", "Силовой фитнес", "3"],
-        ["ВТ", "10:00", "Мышечно-суставная гимнастика", "2"],
+        [
+          "ВТ",
+          "09:00",
+          "Силовой фитнес",
+          "3"
+        ],
+        [
+          "ВТ",
+          "10:00",
+          "Мышечно-суставная гимнастика",
+          "2"
+        ],
 
-        ["СР", "17:00", "Силовой фитнес", "3"],
-        ["СР", "18:00", "Силовой фитнес", "3"],
-        ["СР", "19:00", "TRX", "2"],
-        ["СР", "20:00", "Фитнес-йога", "2"],
+        [
+          "СР",
+          "17:00",
+          "Силовой фитнес",
+          "3"
+        ],
+        [
+          "СР",
+          "18:00",
+          "Силовой фитнес",
+          "3"
+        ],
+        [
+          "СР",
+          "19:00",
+          "TRX",
+          "2"
+        ],
+        [
+          "СР",
+          "20:00",
+          "Фитнес-йога",
+          "2"
+        ],
 
-        ["ЧТ", "09:00", "Силовой фитнес", "3"],
-        ["ЧТ", "10:00", "Растяжка", "2"],
+        [
+          "ЧТ",
+          "09:00",
+          "Силовой фитнес",
+          "3"
+        ],
+        [
+          "ЧТ",
+          "10:00",
+          "Растяжка",
+          "2"
+        ],
 
-        ["ПТ", "17:00", "Растяжка", "2"],
-        ["ПТ", "18:00", "TRX", "2"],
-        ["ПТ", "19:00", "Растяжка", "2"]
+        [
+          "ПТ",
+          "17:00",
+          "Растяжка",
+          "2"
+        ],
+        [
+          "ПТ",
+          "18:00",
+          "TRX",
+          "2"
+        ],
+        [
+          "ПТ",
+          "19:00",
+          "Растяжка",
+          "2"
+        ]
       ]
     },
 
     {
       name: "Федоренко Ольга",
       phone: "+7 904 247-08-15",
+
       directions: [
-        ["Силовой тренинг",
-         "Развитие силы, укрепление мышц и улучшение физической формы."],
-        ["Кроссфит",
-         "Интенсивная функциональная тренировка силы и выносливости."],
-        ["Функционал",
-         "Комплексная функциональная тренировка всего тела."],
-        ["Тренажерный зал",
-         "Силовые тренировки на тренажерах и со свободными весами."]
+        [
+          "Силовой тренинг",
+          "Развитие силы, укрепление мышц и улучшение физической формы."
+        ],
+        [
+          "Кроссфит",
+          "Интенсивная функциональная тренировка силы и выносливости."
+        ],
+        [
+          "Функционал",
+          "Комплексная функциональная тренировка всего тела."
+        ],
+        [
+          "Тренажерный зал",
+          "Силовые тренировки на тренажерах и со свободными весами."
+        ]
       ],
+
       schedule: [
-        ["ПН", "11:00", "Силовой тренинг", "3"],
-        ["ПН", "18:30", "Кроссфит", "1"],
+        [
+          "ПН",
+          "11:00",
+          "Силовой тренинг",
+          "3"
+        ],
+        [
+          "ПН",
+          "18:30",
+          "Кроссфит",
+          "1"
+        ],
 
-        ["ВТ", "10:00", "Функционал", "3"],
-        ["ВТ", "19:00", "Силовой тренинг", "3"],
-        ["ВТ", "20:00", "Тренажерный зал", "GYM"],
+        [
+          "ВТ",
+          "10:00",
+          "Функционал",
+          "3"
+        ],
+        [
+          "ВТ",
+          "19:00",
+          "Силовой тренинг",
+          "3"
+        ],
+        [
+          "ВТ",
+          "20:00",
+          "Тренажерный зал",
+          "GYM"
+        ],
 
-        ["СР", "10:00", "Силовой тренинг", "3"],
+        [
+          "СР",
+          "10:00",
+          "Силовой тренинг",
+          "3"
+        ],
 
-        ["ЧТ", "10:00", "Функционал", "3"],
-        ["ЧТ", "19:00", "Силовой тренинг", "3"],
-        ["ЧТ", "20:00", "Тренажерный зал", "GYM"],
+        [
+          "ЧТ",
+          "10:00",
+          "Функционал",
+          "3"
+        ],
+        [
+          "ЧТ",
+          "19:00",
+          "Силовой тренинг",
+          "3"
+        ],
+        [
+          "ЧТ",
+          "20:00",
+          "Тренажерный зал",
+          "GYM"
+        ],
 
-        ["ПТ", "10:00", "Кроссфит", "1"],
-        ["СБ", "09:00", "Кроссфит", "1"]
+        [
+          "ПТ",
+          "10:00",
+          "Кроссфит",
+          "1"
+        ],
+        [
+          "СБ",
+          "09:00",
+          "Кроссфит",
+          "1"
+        ]
       ]
     },
 
     {
       name: "Ижболдина Наталья",
       phone: "+7 982 837-57-69",
+
       directions: [
-        ["Динамическая растяжка",
-         "Гибкость, улучшение осанки, восстановление и профилактика травм."]
+        [
+          "Динамическая растяжка",
+          "Гибкость, улучшение осанки, восстановление и профилактика травм."
+        ]
       ],
+
       schedule: [
-        ["ВТ", "19:00", "Динамическая растяжка", "5"],
-        ["ЧТ", "19:00", "Динамическая растяжка", "5"],
-        ["ВС", "11:00", "Динамическая растяжка", "5"]
+        [
+          "ВТ",
+          "19:00",
+          "Динамическая растяжка",
+          "5"
+        ],
+        [
+          "ЧТ",
+          "19:00",
+          "Динамическая растяжка",
+          "5"
+        ],
+        [
+          "ВС",
+          "11:00",
+          "Динамическая растяжка",
+          "5"
+        ]
       ]
     },
 
     {
       name: "Солодова Алена",
       phone: "+7 982 127-49-22",
+
       directions: [
-        ["Джампинг",
-         "Кардио на мини-батутах: выносливость, координация и энергия."]
+        [
+          "Джампинг",
+          "Кардио на мини-батутах: выносливость, координация и энергия."
+        ]
       ],
+
       schedule: [
-        ["ВТ", "18:00", "Джампинг", "3"],
-        ["ЧТ", "18:00", "Джампинг", "3"]
+        [
+          "ВТ",
+          "18:00",
+          "Джампинг",
+          "3"
+        ],
+        [
+          "ЧТ",
+          "18:00",
+          "Джампинг",
+          "3"
+        ]
       ]
     },
 
     {
       name: "Кушнир Анна",
       phone: "+7 912 769-85-05",
+
       directions: [
-        ["Силовой тренинг",
-         "Укрепление мышц, развитие силы и выносливости."],
-        ["Функционал",
-         "Функциональная работа на силу, координацию и выносливость."]
+        [
+          "Силовой тренинг",
+          "Укрепление мышц, развитие силы и выносливости."
+        ],
+        [
+          "Функционал",
+          "Функциональная работа на силу, координацию и выносливость."
+        ]
       ],
+
       schedule: [
-        ["СР", "18:00", "Силовой тренинг", "2"],
-        ["ПТ", "18:00", "Функционал", "1"],
-        ["ВС", "11:00", "Функционал", "1"]
+        [
+          "СР",
+          "18:00",
+          "Силовой тренинг",
+          "2"
+        ],
+        [
+          "ПТ",
+          "18:00",
+          "Функционал",
+          "1"
+        ],
+        [
+          "ВС",
+          "11:00",
+          "Функционал",
+          "1"
+        ]
       ]
     },
 
     {
       name: "Васильчевская Евгения",
       phone: "+7 (914) 936-82-32",
+
       directions: [
-        ["Зумба",
-         "Танцевальный фитнес: выносливость, координация и отличное настроение."]
+        [
+          "Зумба",
+          "Танцевальный фитнес: выносливость, координация и отличное настроение."
+        ]
       ],
+
       schedule: [
-        ["ПТ", "18:30", "Зумба", "3"]
+        [
+          "ПТ",
+          "18:30",
+          "Зумба",
+          "3"
+        ]
       ]
     }
   ];
 
-  // Записываем тренеров в Neon
-  for (let i = 0; i < trainers.length; i++) {
-    const t = trainers[i];
 
-    const inserted = await sql`
-      INSERT INTO trainers (name, phone, sort_order)
-      VALUES (${t.name}, ${t.phone}, ${i})
-      RETURNING id
-    `;
+  // ========================================
+  // ЗАПИСЬ ТРЕНЕРОВ В БАЗУ
+  // ========================================
 
-    const trainerId = inserted[0].id;
+  for (
+    let i = 0;
+    i < trainers.length;
+    i++
+  ) {
+    const trainer =
+      trainers[i];
 
-    // Направления
-    for (let d = 0; d < t.directions.length; d++) {
+    const inserted =
+      await sql`
+        INSERT INTO trainers (
+          name,
+          phone,
+          sort_order
+        )
+        VALUES (
+          ${trainer.name},
+          ${trainer.phone},
+          ${i}
+        )
+        RETURNING id
+      `;
+
+    const trainerId =
+      inserted[0].id;
+
+
+    // ======================================
+    // НАПРАВЛЕНИЯ
+    // ======================================
+
+    for (
+      let d = 0;
+      d < trainer.directions.length;
+      d++
+    ) {
+      const direction =
+        trainer.directions[d];
+
       await sql`
         INSERT INTO directions (
           trainer_id,
@@ -294,16 +651,25 @@ async function seedDatabase() {
         )
         VALUES (
           ${trainerId},
-          ${t.directions[d][0]},
-          ${t.directions[d][1]},
+          ${direction[0]},
+          ${direction[1]},
           ${d}
         )
       `;
     }
 
-    // Расписание
-    for (let s = 0; s < t.schedule.length; s++) {
-      const item = t.schedule[s];
+
+    // ======================================
+    // РАСПИСАНИЕ
+    // ======================================
+
+    for (
+      let s = 0;
+      s < trainer.schedule.length;
+      s++
+    ) {
+      const lesson =
+        trainer.schedule[s];
 
       await sql`
         INSERT INTO schedule (
@@ -316,17 +682,17 @@ async function seedDatabase() {
         )
         VALUES (
           ${trainerId},
-          ${item[0]},
-          ${item[1]},
-          ${item[2]},
-          ${item[3]},
+          ${lesson[0]},
+          ${lesson[1]},
+          ${lesson[2]},
+          ${lesson[3]},
           ${s}
         )
       `;
     }
   }
 }
- // ==========================================
+// ==========================================
 // ПОЛУЧЕНИЕ ДАННЫХ ИЗ NEON
 // ==========================================
 
@@ -337,6 +703,7 @@ async function getTrainers() {
     ORDER BY sort_order, id
   `;
 }
+
 
 async function getTrainer(id) {
   const rows = await sql`
@@ -373,6 +740,7 @@ async function getTrainer(id) {
   };
 }
 
+
 async function getTrainersByIds(ids) {
   if (!ids || !ids.length) {
     return [];
@@ -396,7 +764,8 @@ async function getTrainersByIds(ids) {
 
   for (const id of cleanIds) {
     const trainer = trainers.find(
-      t => Number(t.id) === Number(id)
+      item =>
+        Number(item.id) === Number(id)
     );
 
     if (!trainer) {
@@ -427,61 +796,45 @@ async function getTrainersByIds(ids) {
   return result;
 }
 
+
 // ==========================================
-// СОСТОЯНИЕ РЕДАКТИРОВАНИЯ
+// ОБЩЕЕ РАСПИСАНИЕ
 // ==========================================
 
-async function setState(
-  chat,
-  action,
-  trainerId = null,
-  scheduleId = null,
-  data = {}
-) {
-  await sql`
-    INSERT INTO bot_state (
-      chat_id,
-      action,
-      trainer_id,
-      schedule_id,
-      data
-    )
-    VALUES (
-      ${chat},
-      ${action},
-      ${trainerId},
-      ${scheduleId},
-      ${JSON.stringify(data)}::jsonb
-    )
-    ON CONFLICT (chat_id)
-    DO UPDATE SET
-      action = EXCLUDED.action,
-      trainer_id = EXCLUDED.trainer_id,
-      schedule_id = EXCLUDED.schedule_id,
-      data = EXCLUDED.data
+async function getWeekSchedule() {
+  return sql`
+    SELECT
+      s.id,
+      s.trainer_id,
+      s.day,
+      s.time,
+      s.direction,
+      s.hall,
+      s.sort_order,
+      t.name AS trainer_name
+    FROM schedule s
+    JOIN trainers t
+      ON t.id = s.trainer_id
+    ORDER BY
+      CASE UPPER(s.day)
+        WHEN 'ПН' THEN 1
+        WHEN 'ВТ' THEN 2
+        WHEN 'СР' THEN 3
+        WHEN 'ЧТ' THEN 4
+        WHEN 'ПТ' THEN 5
+        WHEN 'СБ' THEN 6
+        WHEN 'ВС' THEN 7
+        ELSE 99
+      END,
+      s.time,
+      s.sort_order,
+      s.id
   `;
 }
 
-async function getState(chat) {
-  const rows = await sql`
-    SELECT *
-    FROM bot_state
-    WHERE chat_id = ${chat}
-    LIMIT 1
-  `;
-
-  return rows[0] || null;
-}
-
-async function clearState(chat) {
-  await sql`
-    DELETE FROM bot_state
-    WHERE chat_id = ${chat}
-  `;
-}
 
 // ==========================================
-// СОСТОЯНИЕ РЕДАКТИРОВАНИЯ
+// СОСТОЯНИЕ БОТА
 // ==========================================
 
 async function setState(
@@ -515,6 +868,7 @@ async function setState(
   `;
 }
 
+
 async function getState(chat) {
   const rows = await sql`
     SELECT *
@@ -526,13 +880,13 @@ async function getState(chat) {
   return rows[0] || null;
 }
 
+
 async function clearState(chat) {
   await sql`
     DELETE FROM bot_state
     WHERE chat_id = ${chat}
   `;
 }
-
 // ==========================================
 // ОСНОВНЫЕ КНОПКИ
 // ==========================================
@@ -566,15 +920,23 @@ function mainKeyboard() {
   ];
 }
 
-async function trainerKeyboard(prefix) {
-  const trainers = await getTrainers();
 
-  const keyboard = trainers.map(t => [
-    {
-      text: t.name,
-      callback_data: `${prefix}:${t.id}`
-    }
-  ]);
+// ==========================================
+// КЛАВИАТУРА СПИСКА ТРЕНЕРОВ
+// ==========================================
+
+async function trainerKeyboard(prefix) {
+  const trainers =
+    await getTrainers();
+
+  const keyboard =
+    trainers.map(trainer => [
+      {
+        text: trainer.name,
+        callback_data:
+          `${prefix}:${trainer.id}`
+      }
+    ]);
 
   keyboard.push([
     {
@@ -585,27 +947,40 @@ async function trainerKeyboard(prefix) {
 
   return keyboard;
 }
-  async function trainerSelectionKeyboard(
+
+
+// ==========================================
+// ВЫБОР НЕСКОЛЬКИХ ТРЕНЕРОВ
+// ==========================================
+
+async function trainerSelectionKeyboard(
   prefix,
   selectedIds = []
 ) {
-  const trainers = await getTrainers();
+  const trainers =
+    await getTrainers();
 
-  return trainers.map(t => {
+  return trainers.map(trainer => {
     const selected =
-      selectedIds.includes(Number(t.id));
+      selectedIds.includes(
+        Number(trainer.id)
+      );
 
     return [
       {
-        text: `${selected ? "✅ " : ""}${t.name}`,
-        callback_data: `${prefix}:${t.id}`
+        text:
+          `${selected ? "✅ " : ""}` +
+          trainer.name,
+        callback_data:
+          `${prefix}:${trainer.id}`
       }
     ];
   });
 }
 
+
 // ==========================================
-// АДМИН-МЕНЮ
+// ГЛАВНОЕ АДМИН-МЕНЮ
 // ==========================================
 
 async function showAdmin(chat) {
@@ -613,113 +988,180 @@ async function showAdmin(chat) {
 
   await sendMessage(
     chat,
-    "✏️ УПРАВЛЕНИЕ ДАННЫМИ\n\nВыберите действие:",
+    "✏️ УПРАВЛЕНИЕ ДАННЫМИ\n\n" +
+    "Выберите действие:",
     [
-      [{
-        text: "👤 Изменить тренера",
-        callback_data: "admin_trainers"
-      }],
-      [{
-        text: "➕ Добавить тренера",
-        callback_data: "add_trainer"
-      }],
-      [{
-        text: "🏠 В меню",
-        callback_data: "home"
-      }]
+      [
+        {
+          text: "👤 Изменить тренера",
+          callback_data:
+            "admin_trainers"
+        }
+      ],
+      [
+        {
+          text: "➕ Добавить тренера",
+          callback_data:
+            "add_trainer"
+        }
+      ],
+      [
+        {
+          text: "🏠 В меню",
+          callback_data: "home"
+        }
+      ]
     ]
   );
 }
 
+
 // ==========================================
-// УПРАВЛЕНИЕ ТРЕНЕРОМ
+// КАРТОЧКА ТРЕНЕРА В АДМИНКЕ
 // ==========================================
 
-async function showTrainerAdmin(chat, id) {
-  const t = await getTrainer(id);
+async function showTrainerAdmin(
+  chat,
+  trainerId
+) {
+  const trainer =
+    await getTrainer(trainerId);
 
-  if (!t) {
-    return sendMessage(chat, "Тренер не найден.");
+  if (!trainer) {
+    return sendMessage(
+      chat,
+      "Тренер не найден."
+    );
   }
 
   await sendMessage(
     chat,
-    `👤 ${t.name}\n📞 ${t.phone}\n\nЧто изменить?`,
+    `👤 ${trainer.name}\n` +
+    `📞 ${trainer.phone}\n\n` +
+    "Что изменить?",
     [
-      [{
-        text: "📅 Расписание",
-        callback_data: `admin_schedule:${id}`
-      }],
-      [{
-        text: "✏️ Имя",
-        callback_data: `edit_name:${id}`
-      }],
-      [{
-        text: "📞 Телефон",
-        callback_data: `edit_phone:${id}`
-      }],
-      [{
-        text: "🏋️ Направления",
-        callback_data: `admin_directions:${id}`
-      }],
-      [{
-        text: "⬅️ К тренерам",
-        callback_data: "admin_trainers"
-      }],
-      [{
-        text: "🏠 В меню",
-        callback_data: "home"
-      }]
+      [
+        {
+          text: "📅 Расписание",
+          callback_data:
+            `admin_schedule:${trainerId}`
+        }
+      ],
+      [
+        {
+          text: "✏️ Имя",
+          callback_data:
+            `edit_name:${trainerId}`
+        }
+      ],
+      [
+        {
+          text: "📞 Телефон",
+          callback_data:
+            `edit_phone:${trainerId}`
+        }
+      ],
+      [
+        {
+          text: "🏋️ Направления",
+          callback_data:
+            `admin_directions:${trainerId}`
+        }
+      ],
+      [
+        {
+          text: "⬅️ К тренерам",
+          callback_data:
+            "admin_trainers"
+        }
+      ],
+      [
+        {
+          text: "🏠 В меню",
+          callback_data: "home"
+        }
+      ]
     ]
   );
 }
 
+
 // ==========================================
-// РАСПИСАНИЕ ТРЕНЕРА
+// РАСПИСАНИЕ ТРЕНЕРА В АДМИНКЕ
 // ==========================================
 
-async function showScheduleAdmin(chat, trainerId) {
-  const t = await getTrainer(trainerId);
+async function showScheduleAdmin(
+  chat,
+  trainerId
+) {
+  const trainer =
+    await getTrainer(trainerId);
 
-  if (!t) {
-    return sendMessage(chat, "Тренер не найден.");
+  if (!trainer) {
+    return sendMessage(
+      chat,
+      "Тренер не найден."
+    );
   }
 
-  const keyboard = t.schedule.map(s => [
-    {
-      text:
-        `${s.day} ${s.time} · ${s.direction} · ` +
-        `${s.hall === "GYM" ? "Тренажерный зал" : "Зал " + s.hall}`,
-      callback_data: `lesson:${s.id}`
-    }
-  ]);
+  const keyboard =
+    trainer.schedule.map(lesson => [
+      {
+        text:
+          `${lesson.day} ` +
+          `${lesson.time} · ` +
+          `${lesson.direction} · ` +
+          (
+            lesson.hall === "GYM"
+              ? "Тренажерный зал"
+              : `Зал ${lesson.hall}`
+          ),
+        callback_data:
+          `lesson:${lesson.id}`
+      }
+    ]);
 
   keyboard.push([
     {
       text: "➕ Добавить занятие",
-      callback_data: `add_lesson:${trainerId}`
+      callback_data:
+        `add_lesson:${trainerId}`
     }
   ]);
 
   keyboard.push([
     {
       text: "⬅️ Назад",
-      callback_data: `admin_trainer:${trainerId}`
+      callback_data:
+        `admin_trainer:${trainerId}`
+    }
+  ]);
+
+  keyboard.push([
+    {
+      text: "🏠 В меню",
+      callback_data: "home"
     }
   ]);
 
   await sendMessage(
     chat,
-    `📅 РАСПИСАНИЕ\n${t.name}\n\nВыберите занятие:`,
+    `📅 РАСПИСАНИЕ\n` +
+    `${trainer.name}\n\n` +
+    "Выберите занятие:",
     keyboard
   );
 }
+
 
 // ==========================================
 // КОНКРЕТНОЕ ЗАНЯТИЕ
 // ==========================================
 
-async function showLessonAdmin(chat, scheduleId) {
+async function showLessonAdmin(
+  chat,
+  scheduleId
+) {
   const rows = await sql`
     SELECT
       s.*,
@@ -732,101 +1174,460 @@ async function showLessonAdmin(chat, scheduleId) {
   `;
 
   if (!rows.length) {
-    return sendMessage(chat, "Занятие не найдено.");
+    return sendMessage(
+      chat,
+      "Занятие не найдено."
+    );
   }
 
-  const s = rows[0];
+  const lesson = rows[0];
 
   const hallText =
-    s.hall === "GYM"
+    lesson.hall === "GYM"
       ? "Тренажерный зал"
-      : `Зал ${s.hall}`;
+      : `Зал ${lesson.hall}`;
 
   await sendMessage(
     chat,
-    `${s.trainer_name}\n\n` +
-    `📅 ${s.day}\n` +
-    `🕐 ${s.time}\n` +
-    `🏋️ ${s.direction}\n` +
+    `${lesson.trainer_name}\n\n` +
+    `📅 ${lesson.day}\n` +
+    `🕐 ${lesson.time}\n` +
+    `🏋️ ${lesson.direction}\n` +
     `🚪 ${hallText}`,
     [
-      [{
-        text: "📅 Изменить день",
-        callback_data: `lesson_day:${s.id}`
-      }],
-      [{
-        text: "🕐 Изменить время",
-        callback_data: `lesson_time:${s.id}`
-      }],
-      [{
-        text: "🏋️ Изменить направление",
-        callback_data: `lesson_direction:${s.id}`
-      }],
-      [{
-        text: "🚪 Изменить зал",
-        callback_data: `lesson_hall:${s.id}`
-      }],
-      [{
-        text: "🗑 Удалить занятие",
-        callback_data: `lesson_delete:${s.id}`
-      }],
-      [{
-        text: "⬅️ Назад",
-        callback_data: `admin_schedule:${s.trainer_id}`
-      }]
+      [
+        {
+          text: "📅 Изменить день",
+          callback_data:
+            `lesson_day:${lesson.id}`
+        }
+      ],
+      [
+        {
+          text: "🕐 Изменить время",
+          callback_data:
+            `lesson_time:${lesson.id}`
+        }
+      ],
+      [
+        {
+          text: "🏋️ Изменить направление",
+          callback_data:
+            `lesson_direction:${lesson.id}`
+        }
+      ],
+      [
+        {
+          text: "🚪 Изменить зал",
+          callback_data:
+            `lesson_hall:${lesson.id}`
+        }
+      ],
+      [
+        {
+          text: "🗑 Удалить занятие",
+          callback_data:
+            `lesson_delete:${lesson.id}`
+        }
+      ],
+      [
+        {
+          text: "⬅️ Назад",
+          callback_data:
+            `admin_schedule:${lesson.trainer_id}`
+        }
+      ]
     ]
   );
 }
+
+
 // ==========================================
-// ОБРАБОТКА ВВЕДЁННЫХ ДАННЫХ
+// НАПРАВЛЕНИЯ ТРЕНЕРА
 // ==========================================
 
-async function processStateMessage(chat, text) {
-  const state = await getState(chat);
+async function showDirectionsAdmin(
+  chat,
+  trainerId
+) {
+  const trainer =
+    await getTrainer(trainerId);
 
-  if (!state || !state.action) {
+  if (!trainer) {
+    return sendMessage(
+      chat,
+      "Тренер не найден."
+    );
+  }
+
+  const keyboard =
+    trainer.directions.map(direction => [
+      {
+        text:
+          `🏋️ ${direction.name}`,
+        callback_data:
+          `direction:${direction.id}`
+      }
+    ]);
+
+  keyboard.push([
+    {
+      text: "➕ Добавить направление",
+      callback_data:
+        `add_direction:${trainerId}`
+    }
+  ]);
+
+  keyboard.push([
+    {
+      text: "⬅️ Назад",
+      callback_data:
+        `admin_trainer:${trainerId}`
+    }
+  ]);
+
+  keyboard.push([
+    {
+      text: "🏠 В меню",
+      callback_data: "home"
+    }
+  ]);
+
+  await sendMessage(
+    chat,
+    `🏋️ НАПРАВЛЕНИЯ\n` +
+    `${trainer.name}\n\n` +
+    "Выберите направление:",
+    keyboard
+  );
+}
+
+
+// ==========================================
+// КОНКРЕТНОЕ НАПРАВЛЕНИЕ
+// ==========================================
+
+async function showDirectionAdmin(
+  chat,
+  directionId
+) {
+  const rows = await sql`
+    SELECT
+      d.*,
+      t.name AS trainer_name
+    FROM directions d
+    JOIN trainers t
+      ON t.id = d.trainer_id
+    WHERE d.id = ${directionId}
+    LIMIT 1
+  `;
+
+  if (!rows.length) {
+    return sendMessage(
+      chat,
+      "Направление не найдено."
+    );
+  }
+
+  const direction = rows[0];
+
+  await sendMessage(
+    chat,
+    `${direction.trainer_name}\n\n` +
+    `🏋️ ${direction.name}\n\n` +
+    `${
+      direction.description ||
+      "Описание не указано"
+    }`,
+    [
+      [
+        {
+          text: "✏️ Изменить название",
+          callback_data:
+            `direction_name:${direction.id}`
+        }
+      ],
+      [
+        {
+          text: "📝 Изменить описание",
+          callback_data:
+            `direction_desc:${direction.id}`
+        }
+      ],
+      [
+        {
+          text: "🗑 Удалить направление",
+          callback_data:
+            `direction_delete:${direction.id}`
+        }
+      ],
+      [
+        {
+          text: "⬅️ Назад",
+          callback_data:
+            `admin_directions:${direction.trainer_id}`
+        }
+      ]
+    ]
+  );
+}
+// ======================================================
+// БЛОК 5
+// ОБРАБОТКА ДАННЫХ + ГЕНЕРАТОР ТРЕНЕРОВ
+// ======================================================
+
+
+// ======================================================
+// ЗАЛЫ
+// ======================================================
+
+function normalizeHall(value = "") {
+  let hall =
+    String(value).trim();
+
+  if (/тренаж/i.test(hall)) {
+    return "GYM";
+  }
+
+  hall =
+    hall.replace(/[^\d]/g, "");
+
+  if (
+    ["1", "2", "3", "5"].includes(hall)
+  ) {
+    return hall;
+  }
+
+  return "";
+}
+
+
+function hallShort(hall) {
+  if (hall === "GYM") {
+    return "GYM";
+  }
+
+  return `ЗАЛ ${hall || ""}`;
+}
+
+
+const HALL_NAMES = {
+  "1": "КРОССФИТ / БОКС",
+  "2": "TRX / АНТИГРАВИТИ",
+  "3": "СИЛОВОЙ ТРЕНИНГ",
+  "5": "ЙОГА / АЭРОЙОГА",
+  GYM: "ТРЕНАЖЕРНЫЙ ЗАЛ"
+};
+
+
+// ======================================================
+// ОБРАБОТКА ТЕКСТА ОТ ПОЛЬЗОВАТЕЛЯ
+// ======================================================
+
+async function processStateMessage(
+  chat,
+  rawText
+) {
+  const state =
+    await getState(chat);
+
+  if (
+    !state ||
+    !state.action
+  ) {
     return false;
   }
 
-  text = text.trim();
+  const text =
+    String(rawText || "").trim();
 
-  // ИЗМЕНИТЬ ИМЯ
-  if (state.action === "edit_name") {
+  if (!text) {
+    await sendMessage(
+      chat,
+      "Введите значение."
+    );
+
+    return true;
+  }
+
+
+  // ====================================================
+  // ИЗМЕНЕНИЕ ИМЕНИ ТРЕНЕРА
+  // ====================================================
+
+  if (
+    state.action ===
+    "edit_name"
+  ) {
     await sql`
       UPDATE trainers
       SET name = ${text}
       WHERE id = ${state.trainer_id}
     `;
 
-    const trainerId = state.trainer_id;
+    const trainerId =
+      state.trainer_id;
 
     await clearState(chat);
-    await sendMessage(chat, "✅ Имя изменено.");
-    await showTrainerAdmin(chat, trainerId);
+
+    await sendMessage(
+      chat,
+      "✅ Имя изменено."
+    );
+
+    await showTrainerAdmin(
+      chat,
+      trainerId
+    );
 
     return true;
   }
 
-  // ИЗМЕНИТЬ ТЕЛЕФОН
-  if (state.action === "edit_phone") {
+
+  // ====================================================
+  // ИЗМЕНЕНИЕ ТЕЛЕФОНА
+  // ====================================================
+
+  if (
+    state.action ===
+    "edit_phone"
+  ) {
     await sql`
       UPDATE trainers
       SET phone = ${text}
       WHERE id = ${state.trainer_id}
     `;
 
-    const trainerId = state.trainer_id;
+    const trainerId =
+      state.trainer_id;
 
     await clearState(chat);
-    await sendMessage(chat, "✅ Телефон изменён.");
-    await showTrainerAdmin(chat, trainerId);
+
+    await sendMessage(
+      chat,
+      "✅ Телефон изменён."
+    );
+
+    await showTrainerAdmin(
+      chat,
+      trainerId
+    );
 
     return true;
   }
 
-  // ИЗМЕНИТЬ ДЕНЬ
-  if (state.action === "lesson_day") {
-    const day = text.toUpperCase();
+
+  // ====================================================
+  // ДОБАВЛЕНИЕ ТРЕНЕРА — ИМЯ
+  // ====================================================
+
+  if (
+    state.action ===
+    "add_trainer_name"
+  ) {
+    await setState(
+      chat,
+      "add_trainer_phone",
+      null,
+      null,
+      {
+        name: text
+      }
+    );
+
+    await sendMessage(
+      chat,
+      "Введите телефон тренера:"
+    );
+
+    return true;
+  }
+
+
+  // ====================================================
+  // ДОБАВЛЕНИЕ ТРЕНЕРА — ТЕЛЕФОН
+  // ====================================================
+
+  if (
+    state.action ===
+    "add_trainer_phone"
+  ) {
+    const data =
+      state.data || {};
+
+    const maxRows =
+      await sql`
+        SELECT
+          COALESCE(
+            MAX(sort_order),
+            -1
+          ) AS max
+        FROM trainers
+      `;
+
+    const inserted =
+      await sql`
+        INSERT INTO trainers (
+          name,
+          phone,
+          sort_order
+        )
+        VALUES (
+          ${data.name || "Без имени"},
+          ${text},
+          ${Number(maxRows[0].max) + 1}
+        )
+        RETURNING id
+      `;
+
+    await clearState(chat);
+
+    await sendMessage(
+      chat,
+      "✅ Тренер добавлен."
+    );
+
+    await showTrainerAdmin(
+      chat,
+      inserted[0].id
+    );
+
+    return true;
+  }
+
+
+  // ====================================================
+  // ИЗМЕНЕНИЕ ДНЯ ЗАНЯТИЯ
+  // ====================================================
+
+  if (
+    state.action ===
+    "lesson_day"
+  ) {
+    const day =
+      text.toUpperCase();
+
+    const allowedDays = [
+      "ПН",
+      "ВТ",
+      "СР",
+      "ЧТ",
+      "ПТ",
+      "СБ",
+      "ВС"
+    ];
+
+    if (
+      !allowedDays.includes(day)
+    ) {
+      await sendMessage(
+        chat,
+        "Введите день в формате:\n" +
+        "ПН, ВТ, СР, ЧТ, ПТ, СБ или ВС."
+      );
+
+      return true;
+    }
 
     await sql`
       UPDATE schedule
@@ -834,64 +1635,108 @@ async function processStateMessage(chat, text) {
       WHERE id = ${state.schedule_id}
     `;
 
-    const lessonId = state.schedule_id;
+    const lessonId =
+      state.schedule_id;
 
     await clearState(chat);
-    await sendMessage(chat, "✅ День изменён.");
-    await showLessonAdmin(chat, lessonId);
+
+    await sendMessage(
+      chat,
+      "✅ День изменён."
+    );
+
+    await showLessonAdmin(
+      chat,
+      lessonId
+    );
 
     return true;
   }
 
-  // ИЗМЕНИТЬ ВРЕМЯ
-  if (state.action === "lesson_time") {
+
+  // ====================================================
+  // ИЗМЕНЕНИЕ ВРЕМЕНИ
+  // ====================================================
+
+  if (
+    state.action ===
+    "lesson_time"
+  ) {
     await sql`
       UPDATE schedule
       SET time = ${text}
       WHERE id = ${state.schedule_id}
     `;
 
-    const lessonId = state.schedule_id;
+    const lessonId =
+      state.schedule_id;
 
     await clearState(chat);
-    await sendMessage(chat, "✅ Время изменено.");
-    await showLessonAdmin(chat, lessonId);
+
+    await sendMessage(
+      chat,
+      "✅ Время изменено."
+    );
+
+    await showLessonAdmin(
+      chat,
+      lessonId
+    );
 
     return true;
   }
 
-  // ИЗМЕНИТЬ НАПРАВЛЕНИЕ
-  if (state.action === "lesson_direction") {
+
+  // ====================================================
+  // ИЗМЕНЕНИЕ НАПРАВЛЕНИЯ ЗАНЯТИЯ
+  // ====================================================
+
+  if (
+    state.action ===
+    "lesson_direction"
+  ) {
     await sql`
       UPDATE schedule
       SET direction = ${text}
       WHERE id = ${state.schedule_id}
     `;
 
-    const lessonId = state.schedule_id;
+    const lessonId =
+      state.schedule_id;
 
     await clearState(chat);
-    await sendMessage(chat, "✅ Направление изменено.");
-    await showLessonAdmin(chat, lessonId);
+
+    await sendMessage(
+      chat,
+      "✅ Направление изменено."
+    );
+
+    await showLessonAdmin(
+      chat,
+      lessonId
+    );
 
     return true;
   }
 
-  // ИЗМЕНИТЬ ЗАЛ
-  if (state.action === "lesson_hall") {
-    let hall = text;
 
-    if (/тренаж/i.test(hall)) {
-      hall = "GYM";
-    } else {
-      hall = hall.replace(/[^\d]/g, "");
-    }
+  // ====================================================
+  // ИЗМЕНЕНИЕ ЗАЛА
+  // ====================================================
+
+  if (
+    state.action ===
+    "lesson_hall"
+  ) {
+    const hall =
+      normalizeHall(text);
 
     if (!hall) {
       await sendMessage(
         chat,
-        "Введите номер зала: 1, 2, 3 или 5.\n" +
-        "Для тренажёрного зала напишите: Тренажерный зал"
+        "Введите:\n" +
+        "1, 2, 3, 5\n" +
+        "или «Тренажерный зал»."
       );
 
       return true;
@@ -903,85 +1748,65 @@ async function processStateMessage(chat, text) {
       WHERE id = ${state.schedule_id}
     `;
 
-    const lessonId = state.schedule_id;
-
-    await clearState(chat);
-    await sendMessage(chat, "✅ Зал изменён.");
-    await showLessonAdmin(chat, lessonId);
-
-    return true;
-  }
-
-  // ========================================
-  // ДОБАВЛЕНИЕ НОВОГО ТРЕНЕРА
-  // ========================================
-
-  if (state.action === "add_trainer_name") {
-    await setState(
-      chat,
-      "add_trainer_phone",
-      null,
-      null,
-      { name: text }
-    );
-
-    await sendMessage(
-      chat,
-      "Теперь введите телефон тренера:"
-    );
-
-    return true;
-  }
-
-  if (state.action === "add_trainer_phone") {
-    const info = state.data || {};
-
-    const maxRows = await sql`
-      SELECT COALESCE(MAX(sort_order), -1) AS max
-      FROM trainers
-    `;
-
-    const result = await sql`
-      INSERT INTO trainers (
-        name,
-        phone,
-        sort_order
-      )
-      VALUES (
-        ${info.name},
-        ${text},
-        ${Number(maxRows[0].max) + 1}
-      )
-      RETURNING id
-    `;
+    const lessonId =
+      state.schedule_id;
 
     await clearState(chat);
 
     await sendMessage(
       chat,
-      "✅ Новый тренер добавлен."
+      "✅ Зал изменён."
     );
 
-    await showTrainerAdmin(
+    await showLessonAdmin(
       chat,
-      result[0].id
+      lessonId
     );
 
     return true;
   }
 
-  // ========================================
-  // ДОБАВЛЕНИЕ НОВОГО ЗАНЯТИЯ
-  // ========================================
 
-  if (state.action === "add_lesson_day") {
+  // ====================================================
+  // НОВОЕ ЗАНЯТИЕ — ДЕНЬ
+  // ====================================================
+
+  if (
+    state.action ===
+    "add_lesson_day"
+  ) {
+    const day =
+      text.toUpperCase();
+
+    const allowedDays = [
+      "ПН",
+      "ВТ",
+      "СР",
+      "ЧТ",
+      "ПТ",
+      "СБ",
+      "ВС"
+    ];
+
+    if (
+      !allowedDays.includes(day)
+    ) {
+      await sendMessage(
+        chat,
+        "Введите день:\n" +
+        "ПН, ВТ, СР, ЧТ, ПТ, СБ или ВС."
+      );
+
+      return true;
+    }
+
     await setState(
       chat,
       "add_lesson_time",
       state.trainer_id,
       null,
       {
-        day: text.toUpperCase()
+        day
       }
     );
 
@@ -993,7 +1818,15 @@ async function processStateMessage(chat, text) {
     return true;
   }
 
-  if (state.action === "add_lesson_time") {
+
+  // ====================================================
+  // НОВОЕ ЗАНЯТИЕ — ВРЕМЯ
+  // ====================================================
+
+  if (
+    state.action ===
+    "add_lesson_time"
+  ) {
     await setState(
       chat,
       "add_lesson_direction",
@@ -1007,13 +1840,21 @@ async function processStateMessage(chat, text) {
 
     await sendMessage(
       chat,
-      "Введите направление.\nНапример: Хатха-йога"
+      "Введите направление."
     );
 
     return true;
   }
 
-  if (state.action === "add_lesson_direction") {
+
+  // ====================================================
+  // НОВОЕ ЗАНЯТИЕ — НАПРАВЛЕНИЕ
+  // ====================================================
+
+  if (
+    state.action ===
+    "add_lesson_direction"
+  ) {
     await setState(
       chat,
       "add_lesson_hall",
@@ -1027,38 +1868,51 @@ async function processStateMessage(chat, text) {
 
     await sendMessage(
       chat,
-      "Введите номер зала: 1, 2, 3 или 5.\n" +
-      "Для тренажёрного зала напишите: Тренажерный зал"
+      "Введите зал:\n" +
+      "1, 2, 3, 5\n" +
+      "или «Тренажерный зал»."
     );
 
     return true;
   }
 
-  if (state.action === "add_lesson_hall") {
-    let hall = text;
 
-    if (/тренаж/i.test(hall)) {
-      hall = "GYM";
-    } else {
-      hall = hall.replace(/[^\d]/g, "");
-    }
+  // ====================================================
+  // НОВОЕ ЗАНЯТИЕ — ЗАЛ
+  // ====================================================
+
+  if (
+    state.action ===
+    "add_lesson_hall"
+  ) {
+    const hall =
+      normalizeHall(text);
 
     if (!hall) {
       await sendMessage(
         chat,
-        "Введите номер зала или «Тренажерный зал»."
+        "Введите:\n" +
+        "1, 2, 3, 5\n" +
+        "или «Тренажерный зал»."
       );
 
       return true;
     }
 
-    const info = state.data || {};
+    const data =
+      state.data || {};
 
-    const maxRows = await sql`
-      SELECT COALESCE(MAX(sort_order), -1) AS max
-      FROM schedule
-      WHERE trainer_id = ${state.trainer_id}
-    `;
+    const maxRows =
+      await sql`
+        SELECT
+          COALESCE(
+            MAX(sort_order),
+            -1
+          ) AS max
+        FROM schedule
+        WHERE trainer_id =
+          ${state.trainer_id}
+      `;
 
     await sql`
       INSERT INTO schedule (
@@ -1071,182 +1925,148 @@ async function processStateMessage(chat, text) {
       )
       VALUES (
         ${state.trainer_id},
-        ${info.day},
-        ${info.time},
-        ${info.direction},
+        ${data.day},
+        ${data.time},
+        ${data.direction},
         ${hall},
         ${Number(maxRows[0].max) + 1}
       )
     `;
 
-    const trainerId = state.trainer_id;
+    const trainerId =
+      state.trainer_id;
 
     await clearState(chat);
-    await sendMessage(chat, "✅ Занятие добавлено.");
-    await showScheduleAdmin(chat, trainerId);
+
+    await sendMessage(
+      chat,
+      "✅ Занятие добавлено."
+    );
+
+    await showScheduleAdmin(
+      chat,
+      trainerId
+    );
 
     return true;
   }
 
-  return false;
-}
-// ==========================================
-// УПРАВЛЕНИЕ НАПРАВЛЕНИЯМИ
-// ==========================================
 
-async function showDirectionsAdmin(chat, trainerId) {
-  const t = await getTrainer(trainerId);
+  // ====================================================
+  // ИЗМЕНЕНИЕ НАЗВАНИЯ НАПРАВЛЕНИЯ
+  // ====================================================
 
-  if (!t) {
-    return sendMessage(chat, "Тренер не найден.");
-  }
-
-  const keyboard = t.directions.map(d => [
-    {
-      text: `🏋️ ${d.name}`,
-      callback_data: `direction:${d.id}`
-    }
-  ]);
-
-  keyboard.push([
-    {
-      text: "➕ Добавить направление",
-      callback_data: `add_direction:${trainerId}`
-    }
-  ]);
-
-  keyboard.push([
-    {
-      text: "⬅️ Назад",
-      callback_data: `admin_trainer:${trainerId}`
-    }
-  ]);
-
-  await sendMessage(
-    chat,
-    `🏋️ НАПРАВЛЕНИЯ\n${t.name}\n\nВыберите направление:`,
-    keyboard
-  );
-}
-
-async function showDirectionAdmin(chat, directionId) {
-  const rows = await sql`
-    SELECT
-      d.*,
-      t.name AS trainer_name
-    FROM directions d
-    JOIN trainers t
-      ON t.id = d.trainer_id
-    WHERE d.id = ${directionId}
-    LIMIT 1
-  `;
-
-  if (!rows.length) {
-    return sendMessage(chat, "Направление не найдено.");
-  }
-
-  const d = rows[0];
-
-  await sendMessage(
-    chat,
-    `${d.trainer_name}\n\n` +
-    `🏋️ ${d.name}\n\n` +
-    `${d.description || "Описание не указано"}`,
-    [
-      [{
-        text: "✏️ Изменить название",
-        callback_data: `direction_name:${d.id}`
-      }],
-      [{
-        text: "📝 Изменить описание",
-        callback_data: `direction_desc:${d.id}`
-      }],
-      [{
-        text: "🗑 Удалить направление",
-        callback_data: `direction_delete:${d.id}`
-      }],
-      [{
-        text: "⬅️ Назад",
-        callback_data: `admin_directions:${d.trainer_id}`
-      }]
-    ]
-  );
-}
-
-// ==========================================
-// ВВОД ДАННЫХ ДЛЯ НАПРАВЛЕНИЙ
-// ==========================================
-
-async function processDirectionState(chat, text) {
-  const state = await getState(chat);
-
-  if (!state || !state.action) {
-    return false;
-  }
-
-  text = text.trim();
-
-  // Изменение названия
-  if (state.action === "direction_name") {
+  if (
+    state.action ===
+    "direction_name"
+  ) {
     await sql`
       UPDATE directions
       SET name = ${text}
       WHERE id = ${state.schedule_id}
     `;
 
-    const directionId = state.schedule_id;
+    const directionId =
+      state.schedule_id;
 
     await clearState(chat);
-    await sendMessage(chat, "✅ Название изменено.");
-    await showDirectionAdmin(chat, directionId);
+
+    await sendMessage(
+      chat,
+      "✅ Название изменено."
+    );
+
+    await showDirectionAdmin(
+      chat,
+      directionId
+    );
 
     return true;
   }
 
-  // Изменение описания
-  if (state.action === "direction_desc") {
+
+  // ====================================================
+  // ИЗМЕНЕНИЕ ОПИСАНИЯ НАПРАВЛЕНИЯ
+  // ====================================================
+
+  if (
+    state.action ===
+    "direction_desc"
+  ) {
     await sql`
       UPDATE directions
       SET description = ${text}
       WHERE id = ${state.schedule_id}
     `;
 
-    const directionId = state.schedule_id;
+    const directionId =
+      state.schedule_id;
 
     await clearState(chat);
-    await sendMessage(chat, "✅ Описание изменено.");
-    await showDirectionAdmin(chat, directionId);
+
+    await sendMessage(
+      chat,
+      "✅ Описание изменено."
+    );
+
+    await showDirectionAdmin(
+      chat,
+      directionId
+    );
 
     return true;
   }
 
-  // Новое направление — название
-  if (state.action === "add_direction_name") {
+
+  // ====================================================
+  // ДОБАВЛЕНИЕ НАПРАВЛЕНИЯ — НАЗВАНИЕ
+  // ====================================================
+
+  if (
+    state.action ===
+    "add_direction_name"
+  ) {
     await setState(
       chat,
       "add_direction_desc",
       state.trainer_id,
       null,
-      { name: text }
+      {
+        name: text
+      }
     );
 
     await sendMessage(
       chat,
-      "Теперь напишите короткое описание направления:"
+      "Введите короткое описание направления:"
     );
 
     return true;
   }
 
-  // Новое направление — описание
-  if (state.action === "add_direction_desc") {
-    const info = state.data || {};
 
-    const maxRows = await sql`
-      SELECT COALESCE(MAX(sort_order), -1) AS max
-      FROM directions
-      WHERE trainer_id = ${state.trainer_id}
-    `;
+  // ====================================================
+  // ДОБАВЛЕНИЕ НАПРАВЛЕНИЯ — ОПИСАНИЕ
+  // ====================================================
+
+  if (
+    state.action ===
+    "add_direction_desc"
+  ) {
+    const data =
+      state.data || {};
+
+    const maxRows =
+      await sql`
+        SELECT
+          COALESCE(
+            MAX(sort_order),
+            -1
+          ) AS max
+        FROM directions
+        WHERE trainer_id =
+          ${state.trainer_id}
+      `;
 
     await sql`
       INSERT INTO directions (
@@ -1257,45 +2077,100 @@ async function processDirectionState(chat, text) {
       )
       VALUES (
         ${state.trainer_id},
-        ${info.name},
+        ${data.name},
         ${text},
         ${Number(maxRows[0].max) + 1}
       )
     `;
 
-    const trainerId = state.trainer_id;
+    const trainerId =
+      state.trainer_id;
 
     await clearState(chat);
-    await sendMessage(chat, "✅ Направление добавлено.");
-    await showDirectionsAdmin(chat, trainerId);
+
+    await sendMessage(
+      chat,
+      "✅ Направление добавлено."
+    );
+
+    await showDirectionsAdmin(
+      chat,
+      trainerId
+    );
 
     return true;
   }
 
-  // ==========================================
-// ТИТАН — ГЕНЕРАТОР ТРЕНЕРОВ
-// 1 / 2 / 3 ТРЕНЕРА · A4 · ЦВЕТ / ЧБ
-// ==========================================
 
-function trainerPosterTheme(theme = "color") {
-  const bw = theme === "bw";
+  return false;
+}
+
+
+// ======================================================
+// ГЕНЕРАТОР ТРЕНЕРОВ «ТИТАН»
+// ======================================================
+
+function posterTheme(
+  theme = "color"
+) {
+  const bw =
+    theme === "bw";
 
   return {
-    bw,
-    bg: bw ? "#ffffff" : "#0b0d10",
-    card: bw ? "#f7f7f7" : "#15181d",
-    card2: bw ? "#ffffff" : "#1b1f25",
-    text: bw ? "#111111" : "#ffffff",
-    muted: bw ? "#666666" : "#b8bec8",
-    line: bw ? "#d8d8d8" : "#30343b",
-    accent: bw ? "#000000" : "#ff6a00",
-    ghost: bw ? "#eeeeee" : "#171a20",
-    onAccent: bw ? "#ffffff" : "#090909"
+    bg:
+      bw
+        ? "#ffffff"
+        : "#0b0d10",
+
+    card:
+      bw
+        ? "#f3f3f3"
+        : "#15181d",
+
+    card2:
+      bw
+        ? "#ffffff"
+        : "#1b1f25",
+
+    text:
+      bw
+        ? "#111111"
+        : "#ffffff",
+
+    muted:
+      bw
+        ? "#666666"
+        : "#b7bdc6",
+
+    line:
+      bw
+        ? "#d3d3d3"
+        : "#30343b",
+
+    accent:
+      bw
+        ? "#000000"
+        : "#ff6a00",
+
+    accentText:
+      bw
+        ? "#ffffff"
+        : "#08090a",
+
+    ghost:
+      bw
+        ? "#ededed"
+        : "#171a20"
   };
 }
 
-function trainerPosterDayOrder(day) {
-  const order = {
+
+// ======================================================
+// СОРТИРОВКА РАСПИСАНИЯ
+// ======================================================
+
+function scheduleDayIndex(day) {
+  const map = {
     ПН: 1,
     ВТ: 2,
     СР: 3,
@@ -1306,17 +2181,22 @@ function trainerPosterDayOrder(day) {
   };
 
   return (
-    order[
-      String(day || "").toUpperCase()
+    map[
+      String(day || "")
+        .toUpperCase()
     ] || 99
   );
 }
 
-function trainerPosterTimeOrder(time) {
+
+function scheduleTimeIndex(
+  time
+) {
   const match =
-    String(time || "").match(
-      /(\d{1,2}):(\d{2})/
-    );
+    String(time || "")
+      .match(
+        /(\d{1,2}):(\d{2})/
+      );
 
   if (!match) {
     return 9999;
@@ -1328,28 +2208,34 @@ function trainerPosterTimeOrder(time) {
   );
 }
 
-function trainerPosterSortSchedule(rows) {
-  return [...(rows || [])].sort(
-    (a, b) => {
-      const dayDiff =
-        trainerPosterDayOrder(a.day) -
-        trainerPosterDayOrder(b.day);
 
-      if (dayDiff !== 0) {
-        return dayDiff;
+function sortSchedule(rows = []) {
+  return [...rows].sort(
+    (a, b) => {
+      const day =
+        scheduleDayIndex(a.day) -
+        scheduleDayIndex(b.day);
+
+      if (day !== 0) {
+        return day;
       }
 
       return (
-        trainerPosterTimeOrder(a.time) -
-        trainerPosterTimeOrder(b.time)
+        scheduleTimeIndex(a.time) -
+        scheduleTimeIndex(b.time)
       );
     }
   );
 }
 
-function trainerPosterWrap(
+
+// ======================================================
+// ПЕРЕНОС ТЕКСТА
+// ======================================================
+
+function wrapText(
   text,
-  maxChars = 35
+  maxChars = 32
 ) {
   const words =
     String(text || "")
@@ -1358,6 +2244,7 @@ function trainerPosterWrap(
       .filter(Boolean);
 
   const lines = [];
+
   let current = "";
 
   for (const word of words) {
@@ -1367,7 +2254,8 @@ function trainerPosterWrap(
         : word;
 
     if (
-      next.length > maxChars &&
+      next.length >
+        maxChars &&
       current
     ) {
       lines.push(current);
@@ -1384,21 +2272,26 @@ function trainerPosterWrap(
   return lines;
 }
 
-function trainerPosterLines(
+
+function svgTextLines(
   lines,
   x,
   y,
   size,
   color,
   weight = 700,
-  gap = 20
+  lineHeight = 20
 ) {
   return (lines || [])
     .map(
-      (line, i) => `
+      (line, index) => `
         <text
           x="${x}"
-          y="${y + i * gap}"
+          y="${
+            y +
+            index *
+              lineHeight
+          }"
           fill="${color}"
           font-family="Arial, Helvetica, sans-serif"
           font-size="${size}"
@@ -1409,17 +2302,16 @@ function trainerPosterLines(
     .join("");
 }
 
-function trainerPosterHall(hall) {
-  if (hall === "GYM") {
-    return "ТРЕНАЖЕРНЫЙ";
-  }
 
-  return `ЗАЛ ${hall || ""}`;
-}
+// ======================================================
+// ШАПКА A4
+// ======================================================
 
-function trainerPosterHeader(C) {
+function posterHeader(C) {
   return `
     <rect
+      x="0"
+      y="0"
       width="1240"
       height="1754"
       fill="${C.bg}"
@@ -1493,13 +2385,18 @@ function trainerPosterHeader(C) {
   `;
 }
 
-function trainerPosterFooter(C) {
+
+// ======================================================
+// НИЗ A4
+// ======================================================
+
+function posterFooter(C) {
   return `
     <line
       x1="56"
-      y1="1696"
+      y1="1694"
       x2="1184"
-      y2="1696"
+      y2="1694"
       stroke="${C.accent}"
       stroke-width="4"
     />
@@ -1526,12 +2423,12 @@ function trainerPosterFooter(C) {
 }
 
 
-// ==========================================
-// ТАБЛИЦА РАСПИСАНИЯ
-// ==========================================
+// ======================================================
+// ТАБЛИЦА РАСПИСАНИЯ ТРЕНЕРА
+// ======================================================
 
-function trainerPosterSchedule({
-  schedule,
+function renderTrainerSchedule({
+  rows = [],
   x,
   y,
   width,
@@ -1539,18 +2436,16 @@ function trainerPosterSchedule({
   C,
   compact = false
 }) {
-  const rows =
-    trainerPosterSortSchedule(
-      schedule
-    );
+  const schedule =
+    sortSchedule(rows);
 
-  if (!rows.length) {
+  if (!schedule.length) {
     return `
       <rect
         x="${x}"
         y="${y}"
         width="${width}"
-        height="58"
+        height="56"
         rx="10"
         fill="${C.card2}"
         stroke="${C.line}"
@@ -1558,61 +2453,79 @@ function trainerPosterSchedule({
 
       <text
         x="${x + 18}"
-        y="${y + 36}"
+        y="${y + 35}"
         fill="${C.muted}"
         font-family="Arial, Helvetica, sans-serif"
-        font-size="16"
+        font-size="15"
         font-weight="700"
       >Расписание пока не заполнено</text>
     `;
   }
 
-  const headH =
-    compact ? 28 : 34;
+  const headerH =
+    compact ? 27 : 34;
+
+  const gap =
+    compact ? 9 : 12;
 
   const minRowH =
-    compact ? 24 : 32;
+    compact ? 21 : 30;
 
   const maxRowH =
-    compact ? 38 : 64;
+    compact ? 36 : 62;
+
+
+  // Максимум 3 колонки.
+  // Подбираем число колонок так,
+  // чтобы строки не накладывались.
 
   let columns = 1;
-  let rowH = 0;
 
   for (
-    let testColumns = 1;
-    testColumns <= 3;
-    testColumns++
+    let test = 1;
+    test <= 3;
+    test++
   ) {
-    const rowsPerCol =
+    const perColumn =
       Math.ceil(
-        rows.length /
-        testColumns
+        schedule.length /
+        test
       );
 
-    const candidate =
-      Math.floor(
-        (
-          height -
-          headH -
-          8
-        ) /
-        rowsPerCol
-      );
+    const possibleRowH =
+      (
+        height -
+        headerH -
+        8
+      ) /
+      perColumn;
 
     if (
-      candidate >= minRowH ||
-      testColumns === 3
+      possibleRowH >=
+        minRowH ||
+      test === 3
     ) {
-      columns =
-        testColumns;
-
-      rowH =
-        candidate;
-
+      columns = test;
       break;
     }
   }
+
+
+  const rowsPerColumn =
+    Math.ceil(
+      schedule.length /
+      columns
+    );
+
+  let rowH =
+    Math.floor(
+      (
+        height -
+        headerH -
+        8
+      ) /
+      rowsPerColumn
+    );
 
   rowH =
     Math.max(
@@ -1623,7 +2536,6 @@ function trainerPosterSchedule({
       )
     );
 
-  const gap = 12;
 
   const colW =
     (
@@ -1633,22 +2545,17 @@ function trainerPosterSchedule({
     ) /
     columns;
 
-  const rowsPerCol =
-    Math.ceil(
-      rows.length /
-      columns
-    );
-
   let svg = "";
 
+
   for (
-    let col = 0;
-    col < columns;
-    col++
+    let column = 0;
+    column < columns;
+    column++
   ) {
     const cx =
       x +
-      col *
+      column *
         (colW + gap);
 
     svg += `
@@ -1656,70 +2563,71 @@ function trainerPosterSchedule({
         x="${cx}"
         y="${y}"
         width="${colW}"
-        height="${headH}"
-        rx="8"
+        height="${headerH}"
+        rx="7"
         fill="${C.accent}"
       />
 
       <text
-        x="${cx + 10}"
-        y="${y + headH - 9}"
-        fill="${C.onAccent}"
+        x="${cx + 9}"
+        y="${y + headerH - 8}"
+        fill="${C.accentText}"
         font-family="Arial, Helvetica, sans-serif"
-        font-size="${compact ? 10 : 13}"
+        font-size="${compact ? 9 : 12}"
         font-weight="900"
       >ДЕНЬ</text>
 
       <text
-        x="${cx + 62}"
-        y="${y + headH - 9}"
-        fill="${C.onAccent}"
+        x="${cx + 58}"
+        y="${y + headerH - 8}"
+        fill="${C.accentText}"
         font-family="Arial, Helvetica, sans-serif"
-        font-size="${compact ? 10 : 13}"
+        font-size="${compact ? 9 : 12}"
         font-weight="900"
       >ВРЕМЯ</text>
 
       <text
-        x="${cx + 145}"
-        y="${y + headH - 9}"
-        fill="${C.onAccent}"
+        x="${cx + 135}"
+        y="${y + headerH - 8}"
+        fill="${C.accentText}"
         font-family="Arial, Helvetica, sans-serif"
-        font-size="${compact ? 10 : 13}"
+        font-size="${compact ? 9 : 12}"
         font-weight="900"
       >НАПРАВЛЕНИЕ</text>
 
       <text
-        x="${cx + colW - 10}"
-        y="${y + headH - 9}"
+        x="${cx + colW - 9}"
+        y="${y + headerH - 8}"
         text-anchor="end"
-        fill="${C.onAccent}"
+        fill="${C.accentText}"
         font-family="Arial, Helvetica, sans-serif"
-        font-size="${compact ? 10 : 13}"
+        font-size="${compact ? 9 : 12}"
         font-weight="900"
       >ЗАЛ</text>
     `;
   }
 
-  rows.forEach(
-    (row, index) => {
-      const col =
+
+  schedule.forEach(
+    (lesson, index) => {
+      const column =
         Math.floor(
           index /
-          rowsPerCol
+          rowsPerColumn
         );
 
       const localIndex =
         index %
-        rowsPerCol;
+        rowsPerColumn;
 
       const rx =
         x +
-        col *
+        column *
           (colW + gap);
 
       const ry =
         y +
-        headH +
+        headerH +
         6 +
         localIndex *
           rowH;
@@ -1729,29 +2637,29 @@ function trainerPosterSchedule({
           ? Math.max(
               9,
               Math.min(
-                14,
-                rowH * 0.38
+                13,
+                rowH * 0.4
               )
             )
           : Math.max(
               12,
               Math.min(
-                19,
-                rowH * 0.34
+                18,
+                rowH * 0.35
               )
             );
 
-      const maxDirection =
+      const maxDirectionChars =
         columns === 1
-          ? 38
+          ? 40
           : columns === 2
-          ? 19
+          ? 20
           : 12;
 
       const direction =
-        trainerPosterWrap(
-          row.direction || "",
-          maxDirection
+        wrapText(
+          lesson.direction,
+          maxDirectionChars
         )[0] || "";
 
       svg += `
@@ -1760,10 +2668,10 @@ function trainerPosterSchedule({
           y="${ry}"
           width="${colW}"
           height="${Math.max(
-            18,
+            17,
             rowH - 4
           )}"
-          rx="8"
+          rx="7"
           fill="${
             localIndex % 2 === 0
               ? C.card2
@@ -1774,26 +2682,38 @@ function trainerPosterSchedule({
         />
 
         <text
-          x="${rx + 10}"
-          y="${ry + rowH / 2 + 5}"
+          x="${rx + 9}"
+          y="${
+            ry +
+            rowH / 2 +
+            5
+          }"
           fill="${C.accent}"
           font-family="Arial, Helvetica, sans-serif"
           font-size="${fontSize}"
           font-weight="900"
-        >${esc(row.day || "")}</text>
+        >${esc(lesson.day)}</text>
 
         <text
-          x="${rx + 62}"
-          y="${ry + rowH / 2 + 5}"
+          x="${rx + 58}"
+          y="${
+            ry +
+            rowH / 2 +
+            5
+          }"
           fill="${C.text}"
           font-family="Arial, Helvetica, sans-serif"
           font-size="${fontSize}"
           font-weight="900"
-        >${esc(row.time || "")}</text>
+        >${esc(lesson.time)}</text>
 
         <text
-          x="${rx + 145}"
-          y="${ry + rowH / 2 + 5}"
+          x="${rx + 135}"
+          y="${
+            ry +
+            rowH / 2 +
+            5
+          }"
           fill="${C.text}"
           font-family="Arial, Helvetica, sans-serif"
           font-size="${Math.max(
@@ -1804,8 +2724,12 @@ function trainerPosterSchedule({
         >${esc(direction)}</text>
 
         <text
-          x="${rx + colW - 10}"
-          y="${ry + rowH / 2 + 5}"
+          x="${rx + colW - 9}"
+          y="${
+            ry +
+            rowH / 2 +
+            5
+          }"
           text-anchor="end"
           fill="${C.accent}"
           font-family="Arial, Helvetica, sans-serif"
@@ -1815,8 +2739,8 @@ function trainerPosterSchedule({
           )}"
           font-weight="900"
         >${esc(
-          trainerPosterHall(
-            row.hall
+          hallShort(
+            lesson.hall
           )
         )}</text>
       `;
@@ -1827,16 +2751,16 @@ function trainerPosterSchedule({
 }
 
 
-// ==========================================
+// ======================================================
 // ОДИН ТРЕНЕР
-// ==========================================
+// ======================================================
 
 function makePoster(
   trainer,
   theme = "color"
 ) {
   const C =
-    trainerPosterTheme(theme);
+    posterTheme(theme);
 
   const W = 1240;
   const H = 1754;
@@ -1870,106 +2794,113 @@ function makePoster(
       preserveAspectRatio="xMidYMid meet"
     >
 
-    ${trainerPosterHeader(C)}
+      ${posterHeader(C)}
 
-    <rect
-      x="${x}"
-      y="${y}"
-      width="${cardW}"
-      height="${cardH}"
-      rx="24"
-      fill="${C.card}"
-      stroke="${C.line}"
-      stroke-width="2"
-    />
+      <rect
+        x="${x}"
+        y="${y}"
+        width="${cardW}"
+        height="${cardH}"
+        rx="24"
+        fill="${C.card}"
+        stroke="${C.line}"
+        stroke-width="2"
+      />
 
-    <rect
-      x="${x}"
-      y="${y}"
-      width="10"
-      height="${cardH}"
-      rx="5"
-      fill="${C.accent}"
-    />
+      <rect
+        x="${x}"
+        y="${y}"
+        width="10"
+        height="${cardH}"
+        rx="5"
+        fill="${C.accent}"
+      />
 
-    <text
-      x="${x + 28}"
-      y="${y + 62}"
-      fill="${C.accent}"
-      font-family="Arial, Helvetica, sans-serif"
-      font-size="22"
-      font-weight="900"
-    >01</text>
+      <text
+        x="${x + 28}"
+        y="${y + 61}"
+        fill="${C.accent}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="22"
+        font-weight="900"
+      >01</text>
 
-    <text
-      x="${x + 78}"
-      y="${y + 63}"
-      fill="${C.text}"
-      font-family="Arial, Helvetica, sans-serif"
-      font-size="52"
-      font-weight="900"
-    >${esc(
-      String(
-        trainer.name || ""
-      ).toUpperCase()
-    )}</text>
+      <text
+        x="${x + 78}"
+        y="${y + 63}"
+        fill="${C.text}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="48"
+        font-weight="900"
+      >${esc(
+        String(
+          trainer.name || ""
+        ).toUpperCase()
+      )}</text>
 
-    <text
-      x="${x + cardW - 28}"
-      y="${y + 61}"
-      text-anchor="end"
-      fill="${C.accent}"
-      font-family="Arial, Helvetica, sans-serif"
-      font-size="26"
-      font-weight="900"
-    >${esc(
-      trainer.phone || ""
-    )}</text>
+      <text
+        x="${x + cardW - 28}"
+        y="${y + 61}"
+        text-anchor="end"
+        fill="${C.accent}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="24"
+        font-weight="900"
+      >${esc(
+        trainer.phone || ""
+      )}</text>
 
-    <line
-      x1="${x + 28}"
-      y1="${y + 86}"
-      x2="${x + cardW - 28}"
-      y2="${y + 86}"
-      stroke="${C.line}"
-      stroke-width="2"
-    />
+      <line
+        x1="${x + 28}"
+        y1="${y + 88}"
+        x2="${x + cardW - 28}"
+        y2="${y + 88}"
+        stroke="${C.line}"
+        stroke-width="2"
+      />
 
-    <text
-      x="${x + 28}"
-      y="${y + 130}"
-      fill="${C.muted}"
-      font-family="Arial, Helvetica, sans-serif"
-      font-size="19"
-      font-weight="900"
-      letter-spacing="2"
-    >НАПРАВЛЕНИЯ</text>
+      <text
+        x="${x + 28}"
+        y="${y + 130}"
+        fill="${C.muted}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="18"
+        font-weight="900"
+        letter-spacing="2"
+      >НАПРАВЛЕНИЯ</text>
   `;
 
-  const visibleDirections =
-    directions.slice(0, 4);
 
-  const dirTop =
+  const visibleDirections =
+    directions.slice(0, 5);
+
+  const directionTop =
     y + 150;
 
-  const dirH =
+  const directionH =
     visibleDirections.length <= 2
-      ? 96
-      : 76;
+      ? 98
+      : visibleDirections.length <= 4
+      ? 76
+      : 65;
 
-  const dirGap = 10;
+  const directionGap = 9;
+
 
   visibleDirections.forEach(
-    (direction, i) => {
+    (direction, index) => {
       const dy =
-        dirTop +
-        i *
-          (dirH + dirGap);
+        directionTop +
+        index *
+          (
+            directionH +
+            directionGap
+          );
 
       const description =
-        trainerPosterWrap(
-          direction.description || "",
-          72
+        wrapText(
+          direction.description,
+          78
         ).slice(0, 2);
 
       svg += `
@@ -1977,8 +2908,8 @@ function makePoster(
           x="${x + 28}"
           y="${dy}"
           width="${cardW - 56}"
-          height="${dirH}"
-          rx="13"
+          height="${directionH}"
+          rx="12"
           fill="${C.card2}"
           stroke="${C.line}"
           stroke-width="1"
@@ -1988,17 +2919,21 @@ function makePoster(
           x="${x + 28}"
           y="${dy}"
           width="7"
-          height="${dirH}"
+          height="${directionH}"
           rx="4"
           fill="${C.accent}"
         />
 
         <text
           x="${x + 48}"
-          y="${dy + 29}"
+          y="${dy + 28}"
           fill="${C.accent}"
           font-family="Arial, Helvetica, sans-serif"
-          font-size="24"
+          font-size="${
+            visibleDirections.length >= 5
+              ? 20
+              : 23
+          }"
           font-weight="900"
         >${esc(
           String(
@@ -2006,28 +2941,34 @@ function makePoster(
           ).toUpperCase()
         )}</text>
 
-        ${trainerPosterLines(
+        ${svgTextLines(
           description,
           x + 48,
-          dy + 54,
-          16,
+          dy + 52,
+          visibleDirections.length >= 5
+            ? 13
+            : 15,
           C.text,
           700,
-          20
+          18
         )}
       `;
     }
   );
 
+
   const directionsBottom =
-    dirTop +
+    directionTop +
     visibleDirections.length *
-      (dirH + dirGap);
+      (
+        directionH +
+        directionGap
+      );
 
   const scheduleTitleY =
     Math.max(
-      directionsBottom + 22,
-      y + 465
+      directionsBottom + 25,
+      y + 470
     );
 
   const hallsY =
@@ -2038,61 +2979,62 @@ function makePoster(
   const scheduleY =
     scheduleTitleY + 20;
 
-  const scheduleH =
+  const scheduleHeight =
     hallsY -
     scheduleY -
     30;
 
+
   svg += `
-    <text
-      x="${x + 28}"
-      y="${scheduleTitleY}"
-      fill="${C.muted}"
-      font-family="Arial, Helvetica, sans-serif"
-      font-size="19"
-      font-weight="900"
-      letter-spacing="2"
-    >РАСПИСАНИЕ</text>
+      <text
+        x="${x + 28}"
+        y="${scheduleTitleY}"
+        fill="${C.muted}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="18"
+        font-weight="900"
+        letter-spacing="2"
+      >РАСПИСАНИЕ</text>
 
-    ${trainerPosterSchedule({
-      schedule,
-      x: x + 28,
-      y: scheduleY,
-      width: cardW - 56,
-      height: scheduleH,
-      C,
-      compact: false
-    })}
+      ${renderTrainerSchedule({
+        rows: schedule,
+        x: x + 28,
+        y: scheduleY,
+        width: cardW - 56,
+        height: scheduleHeight,
+        C,
+        compact: false
+      })}
 
-    <text
-      x="${x + 28}"
-      y="${hallsY}"
-      fill="${C.muted}"
-      font-family="Arial, Helvetica, sans-serif"
-      font-size="17"
-      font-weight="900"
-      letter-spacing="2"
-    >ЗАЛЫ «ТИТАН»</text>
+      <text
+        x="${x + 28}"
+        y="${hallsY}"
+        fill="${C.muted}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="16"
+        font-weight="900"
+        letter-spacing="2"
+      >ЗАЛЫ «ТИТАН»</text>
 
-    <text
-      x="${x + 28}"
-      y="${hallsY + 32}"
-      fill="${C.text}"
-      font-family="Arial, Helvetica, sans-serif"
-      font-size="13"
-      font-weight="800"
-    >1 — КРОССФИТ / БОКС · 2 — TRX / АНТИГРАВИТИ · 3 — СИЛОВОЙ ТРЕНИНГ</text>
+      <text
+        x="${x + 28}"
+        y="${hallsY + 31}"
+        fill="${C.text}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="13"
+        font-weight="800"
+      >1 — КРОССФИТ / БОКС · 2 — TRX / АНТИГРАВИТИ · 3 — СИЛОВОЙ ТРЕНИНГ</text>
 
-    <text
-      x="${x + 28}"
-      y="${hallsY + 58}"
-      fill="${C.text}"
-      font-family="Arial, Helvetica, sans-serif"
-      font-size="13"
-      font-weight="800"
-    >5 — ЙОГА / АЭРОЙОГА · GYM — ТРЕНАЖЕРНЫЙ ЗАЛ</text>
+      <text
+        x="${x + 28}"
+        y="${hallsY + 57}"
+        fill="${C.text}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="13"
+        font-weight="800"
+      >5 — ЙОГА / АЭРОЙОГА · GYM — ТРЕНАЖЕРНЫЙ ЗАЛ</text>
 
-    ${trainerPosterFooter(C)}
+      ${posterFooter(C)}
 
     </svg>
   `;
@@ -2101,9 +3043,9 @@ function makePoster(
 }
 
 
-// ==========================================
+// ======================================================
 // ДВА / ТРИ ТРЕНЕРА
-// ==========================================
+// ======================================================
 
 function makeMultiTrainerPoster(
   trainers,
@@ -2116,19 +3058,22 @@ function makeMultiTrainerPoster(
 
   if (!list.length) {
     throw new Error(
-      "Нет тренеров для инфографики"
+      "Нет выбранных тренеров"
     );
   }
 
-  if (list.length === 1) {
+  if (
+    list.length === 1
+  ) {
     return makePoster(
       list[0],
       theme
     );
   }
 
+
   const C =
-    trainerPosterTheme(theme);
+    posterTheme(theme);
 
   const W = 1240;
   const H = 1754;
@@ -2156,7 +3101,9 @@ function makeMultiTrainerPoster(
     count;
 
   const cardW =
-    W - PAD * 2;
+    W -
+    PAD * 2;
+
 
   let svg = `
     <svg
@@ -2167,15 +3114,19 @@ function makeMultiTrainerPoster(
       preserveAspectRatio="xMidYMid meet"
     >
 
-    ${trainerPosterHeader(C)}
+      ${posterHeader(C)}
   `;
 
+
   list.forEach(
-    (trainer, index) => {
+    (trainer, trainerIndex) => {
       const cardY =
         top +
-        index *
-          (cardH + gap);
+        trainerIndex *
+          (
+            cardH +
+            gap
+          );
 
       const innerX =
         PAD + 26;
@@ -2197,20 +3148,22 @@ function makeMultiTrainerPoster(
           ? trainer.schedule
           : [];
 
+
       const nameSize =
         count === 2
-          ? 37
-          : 28;
+          ? 36
+          : 27;
 
       const phoneSize =
         count === 2
-          ? 20
-          : 16;
+          ? 19
+          : 15;
 
       const sectionSize =
         count === 2
-          ? 16
-          : 13;
+          ? 15
+          : 12;
+
 
       svg += `
         <rect
@@ -2218,7 +3171,7 @@ function makeMultiTrainerPoster(
           y="${cardY}"
           width="${cardW}"
           height="${cardH}"
-          rx="22"
+          rx="21"
           fill="${C.card}"
           stroke="${C.line}"
           stroke-width="2"
@@ -2235,18 +3188,25 @@ function makeMultiTrainerPoster(
 
         <text
           x="${innerX}"
-          y="${cardY + 45}"
+          y="${cardY + 44}"
           fill="${C.accent}"
           font-family="Arial, Helvetica, sans-serif"
-          font-size="${count === 2 ? 18 : 14}"
+          font-size="${
+            count === 2
+              ? 17
+              : 13
+          }"
           font-weight="900"
         >${String(
-          index + 1
-        ).padStart(2, "0")}</text>
+          trainerIndex + 1
+        ).padStart(
+          2,
+          "0"
+        )}</text>
 
         <text
-          x="${innerX + 44}"
-          y="${cardY + 47}"
+          x="${innerX + 43}"
+          y="${cardY + 46}"
           fill="${C.text}"
           font-family="Arial, Helvetica, sans-serif"
           font-size="${nameSize}"
@@ -2258,8 +3218,12 @@ function makeMultiTrainerPoster(
         )}</text>
 
         <text
-          x="${PAD + cardW - 26}"
-          y="${cardY + 45}"
+          x="${
+            PAD +
+            cardW -
+            26
+          }"
+          y="${cardY + 44}"
           text-anchor="end"
           fill="${C.accent}"
           font-family="Arial, Helvetica, sans-serif"
@@ -2271,24 +3235,32 @@ function makeMultiTrainerPoster(
 
         <line
           x1="${innerX}"
-          y1="${cardY + 66}"
-          x2="${PAD + cardW - 26}"
-          y2="${cardY + 66}"
+          y1="${cardY + 65}"
+          x2="${
+            PAD +
+            cardW -
+            26
+          }"
+          y2="${cardY + 65}"
           stroke="${C.line}"
           stroke-width="1.5"
         />
       `;
 
-      const dirTitleY =
+
+      const directionsTitleY =
         cardY +
-        (count === 2
-          ? 102
-          : 90);
+        (
+          count === 2
+            ? 101
+            : 88
+        );
+
 
       svg += `
         <text
           x="${innerX}"
-          y="${dirTitleY}"
+          y="${directionsTitleY}"
           fill="${C.muted}"
           font-family="Arial, Helvetica, sans-serif"
           font-size="${sectionSize}"
@@ -2297,51 +3269,66 @@ function makeMultiTrainerPoster(
         >НАПРАВЛЕНИЯ</text>
       `;
 
-      const maxDirs =
-        count === 2
-          ? 3
-          : 2;
 
-      const visibleDirs =
+      // В 2-тренерном варианте
+      // показываем до 4 направлений.
+      // В 3-тренерном до 3.
+
+      const maxDirections =
+        count === 2
+          ? 4
+          : 3;
+
+      const visibleDirections =
         directions.slice(
           0,
-          maxDirs
+          maxDirections
         );
 
-      const dirGap = 10;
+      const directionGap = 8;
 
-      const dirCount =
+      const directionCount =
         Math.max(
           1,
-          visibleDirs.length
+          visibleDirections.length
         );
 
-      const dirW =
+      const directionW =
         (
           innerW -
-          dirGap *
-            (dirCount - 1)
+          directionGap *
+            (
+              directionCount -
+              1
+            )
         ) /
-        dirCount;
+        directionCount;
 
-      const dirH =
+      const directionH =
         count === 2
-          ? 94
-          : 66;
+          ? 89
+          : 62;
 
-      visibleDirs.forEach(
-        (direction, dirIndex) => {
+
+      visibleDirections.forEach(
+        (
+          direction,
+          directionIndex
+        ) => {
           const dx =
             innerX +
-            dirIndex *
-              (dirW + dirGap);
+            directionIndex *
+              (
+                directionW +
+                directionGap
+              );
 
           const description =
-            trainerPosterWrap(
-              direction.description || "",
+            wrapText(
+              direction.description,
               count === 2
-                ? 28
-                : 18
+                ? 25
+                : 16
             ).slice(
               0,
               count === 2
@@ -2352,10 +3339,13 @@ function makeMultiTrainerPoster(
           svg += `
             <rect
               x="${dx}"
-              y="${dirTitleY + 14}"
-              width="${dirW}"
-              height="${dirH}"
-              rx="11"
+              y="${
+                directionsTitleY +
+                13
+              }"
+              width="${directionW}"
+              height="${directionH}"
+              rx="10"
               fill="${C.card2}"
               stroke="${C.line}"
               stroke-width="1"
@@ -2363,63 +3353,85 @@ function makeMultiTrainerPoster(
 
             <rect
               x="${dx}"
-              y="${dirTitleY + 14}"
+              y="${
+                directionsTitleY +
+                13
+              }"
               width="6"
-              height="${dirH}"
+              height="${directionH}"
               rx="3"
               fill="${C.accent}"
             />
 
             <text
-              x="${dx + 15}"
-              y="${dirTitleY + 39}"
+              x="${dx + 14}"
+              y="${
+                directionsTitleY +
+                37
+              }"
               fill="${C.accent}"
               font-family="Arial, Helvetica, sans-serif"
-              font-size="${count === 2 ? 18 : 14}"
+              font-size="${
+                count === 2
+                  ? 16
+                  : 12
+              }"
               font-weight="900"
             >${esc(
               String(
-                direction.name || ""
+                direction.name ||
+                  ""
               ).toUpperCase()
             )}</text>
 
-            ${trainerPosterLines(
+            ${svgTextLines(
               description,
-              dx + 15,
-              dirTitleY + 60,
+              dx + 14,
+              directionsTitleY +
+                57,
               count === 2
-                ? 12
-                : 9.5,
+                ? 11
+                : 8.5,
               C.text,
               700,
-              15
+              14
             )}
           `;
         }
       );
 
+
       const scheduleTitleY =
-        dirTitleY +
-        14 +
-        dirH +
-        (count === 2
-          ? 31
-          : 25);
+        directionsTitleY +
+        13 +
+        directionH +
+        (
+          count === 2
+            ? 31
+            : 23
+        );
+
 
       const hallsY =
         cardY +
         cardH -
-        (count === 2
-          ? 64
-          : 49);
+        (
+          count === 2
+            ? 64
+            : 47
+        );
+
 
       const scheduleY =
-        scheduleTitleY + 14;
+        scheduleTitleY +
+        13;
 
-      const scheduleH =
+
+      const scheduleHeight =
         hallsY -
         scheduleY -
-        17;
+        16;
+
 
       svg += `
         <text
@@ -2432,12 +3444,12 @@ function makeMultiTrainerPoster(
           letter-spacing="2"
         >РАСПИСАНИЕ</text>
 
-        ${trainerPosterSchedule({
-          schedule,
+        ${renderTrainerSchedule({
+          rows: schedule,
           x: innerX,
           y: scheduleY,
           width: innerW,
-          height: scheduleH,
+          height: scheduleHeight,
           C,
           compact: true
         })}
@@ -2453,121 +3465,4536 @@ function makeMultiTrainerPoster(
         >ЗАЛЫ</text>
 
         <text
-          x="${innerX + 64}"
+          x="${innerX + 60}"
           y="${hallsY}"
           fill="${C.text}"
           font-family="Arial, Helvetica, sans-serif"
-          font-size="${count === 2 ? 11 : 8.5}"
+          font-size="${
+            count === 2
+              ? 10
+              : 8
+          }"
           font-weight="800"
         >1 — КРОССФИТ / БОКС · 2 — TRX / АНТИГРАВИТИ · 3 — СИЛОВОЙ · 5 — ЙОГА / АЭРОЙОГА · GYM — ТРЕНАЖЕРНЫЙ</text>
       `;
     }
   );
 
+
   svg += `
-    ${trainerPosterFooter(C)}
+      ${posterFooter(C)}
     </svg>
   `;
 
   return svg;
 }
+// ==========================================
+// ОБРАБОТКА ТЕКСТОВОГО ВВОДА
+// ==========================================
 
-    // ========================================
+async function processStateMessage(
+  chat,
+  text
+) {
+  const state =
+    await getState(chat);
+
+  if (
+    !state ||
+    !state.action
+  ) {
+    return false;
+  }
+
+  text = String(text || "").trim();
+
+  if (!text) {
+    return true;
+  }
+
+
+  // ========================================
+  // ИЗМЕНИТЬ ИМЯ
+  // ========================================
+
+  if (
+    state.action === "edit_name"
+  ) {
+    await sql`
+      UPDATE trainers
+      SET name = ${text}
+      WHERE id = ${state.trainer_id}
+    `;
+
+    const trainerId =
+      state.trainer_id;
+
+    await clearState(chat);
+
+    await sendMessage(
+      chat,
+      "✅ Имя изменено."
+    );
+
+    await showTrainerAdmin(
+      chat,
+      trainerId
+    );
+
+    return true;
+  }
+
+
+  // ========================================
+  // ИЗМЕНИТЬ ТЕЛЕФОН
+  // ========================================
+
+  if (
+    state.action === "edit_phone"
+  ) {
+    await sql`
+      UPDATE trainers
+      SET phone = ${text}
+      WHERE id = ${state.trainer_id}
+    `;
+
+    const trainerId =
+      state.trainer_id;
+
+    await clearState(chat);
+
+    await sendMessage(
+      chat,
+      "✅ Телефон изменён."
+    );
+
+    await showTrainerAdmin(
+      chat,
+      trainerId
+    );
+
+    return true;
+  }
+
+
+  // ========================================
+  // ИЗМЕНИТЬ ДЕНЬ
+  // ========================================
+
+  if (
+    state.action === "lesson_day"
+  ) {
+    const day =
+      text.toUpperCase();
+
+    const allowedDays = [
+      "ПН",
+      "ВТ",
+      "СР",
+      "ЧТ",
+      "ПТ",
+      "СБ",
+      "ВС"
+    ];
+
+    if (
+      !allowedDays.includes(day)
+    ) {
+      await sendMessage(
+        chat,
+        "Введите день в формате:\n\n" +
+        "ПН, ВТ, СР, ЧТ, ПТ, СБ или ВС"
+      );
+
+      return true;
+    }
+
+    await sql`
+      UPDATE schedule
+      SET day = ${day}
+      WHERE id = ${state.schedule_id}
+    `;
+
+    const lessonId =
+      state.schedule_id;
+
+    await clearState(chat);
+
+    await sendMessage(
+      chat,
+      "✅ День изменён."
+    );
+
+    await showLessonAdmin(
+      chat,
+      lessonId
+    );
+
+    return true;
+  }
+
+
+  // ========================================
+  // ИЗМЕНИТЬ ВРЕМЯ
+  // ========================================
+
+  if (
+    state.action === "lesson_time"
+  ) {
+    await sql`
+      UPDATE schedule
+      SET time = ${text}
+      WHERE id = ${state.schedule_id}
+    `;
+
+    const lessonId =
+      state.schedule_id;
+
+    await clearState(chat);
+
+    await sendMessage(
+      chat,
+      "✅ Время изменено."
+    );
+
+    await showLessonAdmin(
+      chat,
+      lessonId
+    );
+
+    return true;
+  }
+
+
+  // ========================================
+  // ИЗМЕНИТЬ НАПРАВЛЕНИЕ
+  // ========================================
+
+  if (
+    state.action === "lesson_direction"
+  ) {
+    await sql`
+      UPDATE schedule
+      SET direction = ${text}
+      WHERE id = ${state.schedule_id}
+    `;
+
+    const lessonId =
+      state.schedule_id;
+
+    await clearState(chat);
+
+    await sendMessage(
+      chat,
+      "✅ Направление изменено."
+    );
+
+    await showLessonAdmin(
+      chat,
+      lessonId
+    );
+
+    return true;
+  }
+
+
+  // ========================================
+  // ИЗМЕНИТЬ ЗАЛ
+  // ========================================
+
+  if (
+    state.action === "lesson_hall"
+  ) {
+    let hall = text;
+
+    if (
+      /тренаж/i.test(hall)
+    ) {
+      hall = "GYM";
+    } else {
+      hall =
+        hall.replace(/[^\d]/g, "");
+    }
+
+    if (
+      !["1", "2", "3", "5", "GYM"]
+        .includes(hall)
+    ) {
+      await sendMessage(
+        chat,
+        "Введите номер зала:\n\n" +
+        "1, 2, 3 или 5\n" +
+        "Для тренажёрного зала — «Тренажерный зал»"
+      );
+
+      return true;
+    }
+
+    await sql`
+      UPDATE schedule
+      SET hall = ${hall}
+      WHERE id = ${state.schedule_id}
+    `;
+
+    const lessonId =
+      state.schedule_id;
+
+    await clearState(chat);
+
+    await sendMessage(
+      chat,
+      "✅ Зал изменён."
+    );
+
+    await showLessonAdmin(
+      chat,
+      lessonId
+    );
+
+    return true;
+  }
+
+
+  // ========================================
+  // ДОБАВЛЕНИЕ ТРЕНЕРА — ИМЯ
+  // ========================================
+
+  if (
+    state.action ===
+    "add_trainer_name"
+  ) {
+    await setState(
+      chat,
+      "add_trainer_phone",
+      null,
+      null,
+      {
+        name: text
+      }
+    );
+
+    await sendMessage(
+      chat,
+      "Введите телефон тренера:"
+    );
+
+    return true;
+  }
+
+
+  // ========================================
+  // ДОБАВЛЕНИЕ ТРЕНЕРА — ТЕЛЕФОН
+  // ========================================
+
+  if (
+    state.action ===
+    "add_trainer_phone"
+  ) {
+    const info =
+      state.data || {};
+
+    const maxRows =
+      await sql`
+        SELECT
+          COALESCE(
+            MAX(sort_order),
+            -1
+          ) AS max
+        FROM trainers
+      `;
+
+    const inserted =
+      await sql`
+        INSERT INTO trainers (
+          name,
+          phone,
+          sort_order
+        )
+        VALUES (
+          ${info.name},
+          ${text},
+          ${Number(maxRows[0].max) + 1}
+        )
+        RETURNING id
+      `;
+
+    const trainerId =
+      inserted[0].id;
+
+    await clearState(chat);
+
+    await sendMessage(
+      chat,
+      "✅ Новый тренер добавлен."
+    );
+
+    await showTrainerAdmin(
+      chat,
+      trainerId
+    );
+
+    return true;
+  }
+
+
+  // ========================================
+  // ДОБАВЛЕНИЕ ЗАНЯТИЯ — ДЕНЬ
+  // ========================================
+
+  if (
+    state.action ===
+    "add_lesson_day"
+  ) {
+    const day =
+      text.toUpperCase();
+
+    const allowedDays = [
+      "ПН",
+      "ВТ",
+      "СР",
+      "ЧТ",
+      "ПТ",
+      "СБ",
+      "ВС"
+    ];
+
+    if (
+      !allowedDays.includes(day)
+    ) {
+      await sendMessage(
+        chat,
+        "Введите день:\n" +
+        "ПН, ВТ, СР, ЧТ, ПТ, СБ или ВС"
+      );
+
+      return true;
+    }
+
+    await setState(
+      chat,
+      "add_lesson_time",
+      state.trainer_id,
+      null,
+      {
+        day
+      }
+    );
+
+    await sendMessage(
+      chat,
+      "Введите время.\n\n" +
+      "Например: 18:00"
+    );
+
+    return true;
+  }
+
+
+  // ========================================
+  // ДОБАВЛЕНИЕ ЗАНЯТИЯ — ВРЕМЯ
+  // ========================================
+
+  if (
+    state.action ===
+    "add_lesson_time"
+  ) {
+    await setState(
+      chat,
+      "add_lesson_direction",
+      state.trainer_id,
+      null,
+      {
+        ...(state.data || {}),
+        time: text
+      }
+    );
+
+    await sendMessage(
+      chat,
+      "Введите направление.\n\n" +
+      "Например: Хатха-йога"
+    );
+
+    return true;
+  }
+
+
+  // ========================================
+  // ДОБАВЛЕНИЕ ЗАНЯТИЯ — НАПРАВЛЕНИЕ
+  // ========================================
+
+  if (
+    state.action ===
+    "add_lesson_direction"
+  ) {
+    await setState(
+      chat,
+      "add_lesson_hall",
+      state.trainer_id,
+      null,
+      {
+        ...(state.data || {}),
+        direction: text
+      }
+    );
+
+    await sendMessage(
+      chat,
+      "Введите номер зала:\n\n" +
+      "1, 2, 3 или 5\n" +
+      "Для тренажёрного зала — «Тренажерный зал»"
+    );
+
+    return true;
+  }
+
+
+  // ========================================
+  // ДОБАВЛЕНИЕ ЗАНЯТИЯ — ЗАЛ
+  // ========================================
+
+  if (
+    state.action ===
+    "add_lesson_hall"
+  ) {
+    let hall = text;
+
+    if (
+      /тренаж/i.test(hall)
+    ) {
+      hall = "GYM";
+    } else {
+      hall =
+        hall.replace(/[^\d]/g, "");
+    }
+
+    if (
+      !["1", "2", "3", "5", "GYM"]
+        .includes(hall)
+    ) {
+      await sendMessage(
+        chat,
+        "Введите номер зала:\n\n" +
+        "1, 2, 3 или 5\n" +
+        "или «Тренажерный зал»"
+      );
+
+      return true;
+    }
+
+    const info =
+      state.data || {};
+
+    const maxRows =
+      await sql`
+        SELECT
+          COALESCE(
+            MAX(sort_order),
+            -1
+          ) AS max
+        FROM schedule
+        WHERE trainer_id =
+          ${state.trainer_id}
+      `;
+
+    await sql`
+      INSERT INTO schedule (
+        trainer_id,
+        day,
+        time,
+        direction,
+        hall,
+        sort_order
+      )
+      VALUES (
+        ${state.trainer_id},
+        ${info.day},
+        ${info.time},
+        ${info.direction},
+        ${hall},
+        ${Number(maxRows[0].max) + 1}
+      )
+    `;
+
+    const trainerId =
+      state.trainer_id;
+
+    await clearState(chat);
+
+    await sendMessage(
+      chat,
+      "✅ Занятие добавлено."
+    );
+
+    await showScheduleAdmin(
+      chat,
+      trainerId
+    );
+
+    return true;
+  }
+
+
+  return false;
+}
+// ==========================================
+// ОБРАБОТКА НАПРАВЛЕНИЙ
+// ==========================================
+
+async function processDirectionState(
+  chat,
+  text
+) {
+  const state =
+    await getState(chat);
+
+  if (
+    !state ||
+    !state.action
+  ) {
+    return false;
+  }
+
+  text = String(text || "").trim();
+
+  if (!text) {
+    return true;
+  }
+
+
+  // ========================================
+  // ИЗМЕНЕНИЕ НАЗВАНИЯ
+  // ========================================
+
+  if (
+    state.action ===
+    "direction_name"
+  ) {
+    await sql`
+      UPDATE directions
+      SET name = ${text}
+      WHERE id = ${state.schedule_id}
+    `;
+
+    const directionId =
+      state.schedule_id;
+
+    await clearState(chat);
+
+    await sendMessage(
+      chat,
+      "✅ Название изменено."
+    );
+
+    await showDirectionAdmin(
+      chat,
+      directionId
+    );
+
+    return true;
+  }
+
+
+  // ========================================
+  // ИЗМЕНЕНИЕ ОПИСАНИЯ
+  // ========================================
+
+  if (
+    state.action ===
+    "direction_desc"
+  ) {
+    await sql`
+      UPDATE directions
+      SET description = ${text}
+      WHERE id = ${state.schedule_id}
+    `;
+
+    const directionId =
+      state.schedule_id;
+
+    await clearState(chat);
+
+    await sendMessage(
+      chat,
+      "✅ Описание изменено."
+    );
+
+    await showDirectionAdmin(
+      chat,
+      directionId
+    );
+
+    return true;
+  }
+
+
+  // ========================================
+  // НОВОЕ НАПРАВЛЕНИЕ — НАЗВАНИЕ
+  // ========================================
+
+  if (
+    state.action ===
+    "add_direction_name"
+  ) {
+    await setState(
+      chat,
+      "add_direction_desc",
+      state.trainer_id,
+      null,
+      {
+        name: text
+      }
+    );
+
+    await sendMessage(
+      chat,
+      "Введите короткое описание направления:"
+    );
+
+    return true;
+  }
+
+
+  // ========================================
+  // НОВОЕ НАПРАВЛЕНИЕ — ОПИСАНИЕ
+  // ========================================
+
+  if (
+    state.action ===
+    "add_direction_desc"
+  ) {
+    const info =
+      state.data || {};
+
+    const maxRows =
+      await sql`
+        SELECT
+          COALESCE(
+            MAX(sort_order),
+            -1
+          ) AS max
+        FROM directions
+        WHERE trainer_id =
+          ${state.trainer_id}
+      `;
+
+    await sql`
+      INSERT INTO directions (
+        trainer_id,
+        name,
+        description,
+        sort_order
+      )
+      VALUES (
+        ${state.trainer_id},
+        ${info.name},
+        ${text},
+        ${Number(maxRows[0].max) + 1}
+      )
+    `;
+
+    const trainerId =
+      state.trainer_id;
+
+    await clearState(chat);
+
+    await sendMessage(
+      chat,
+      "✅ Направление добавлено."
+    );
+
+    await showDirectionsAdmin(
+      chat,
+      trainerId
+    );
+
+    return true;
+  }
+
+
+  return false;
+}
+// ==========================================
+// ТИТАН — ГЕНЕРАТОР ИНФОГРАФИКИ ТРЕНЕРОВ
+// ==========================================
+
+function trainerPosterTheme(
+  theme = "color"
+) {
+  const bw =
+    theme === "bw";
+
+  return {
+    bw,
+
+    bg:
+      bw
+        ? "#ffffff"
+        : "#0b0d10",
+
+    card:
+      bw
+        ? "#f5f5f5"
+        : "#15181d",
+
+    card2:
+      bw
+        ? "#ffffff"
+        : "#1d2127",
+
+    text:
+      bw
+        ? "#111111"
+        : "#ffffff",
+
+    muted:
+      bw
+        ? "#666666"
+        : "#b8bec8",
+
+    line:
+      bw
+        ? "#d7d7d7"
+        : "#30343b",
+
+    accent:
+      bw
+        ? "#111111"
+        : "#ff6a00",
+
+    ghost:
+      bw
+        ? "#eeeeee"
+        : "#171a20",
+
+    onAccent:
+      "#ffffff"
+  };
+}
+
+
+// ==========================================
+// СОРТИРОВКА ДНЕЙ
+// ==========================================
+
+function trainerPosterDayOrder(
+  day
+) {
+  const order = {
+    "ПН": 1,
+    "ВТ": 2,
+    "СР": 3,
+    "ЧТ": 4,
+    "ПТ": 5,
+    "СБ": 6,
+    "ВС": 7
+  };
+
+  return (
+    order[
+      String(day || "")
+        .trim()
+        .toUpperCase()
+    ] || 99
+  );
+}
+
+
+// ==========================================
+// СОРТИРОВКА ВРЕМЕНИ
+// ==========================================
+
+function trainerPosterTimeOrder(
+  time
+) {
+  const match =
+    String(time || "")
+      .match(
+        /(\d{1,2}):(\d{2})/
+      );
+
+  if (!match) {
+    return 9999;
+  }
+
+  return (
+    Number(match[1]) * 60 +
+    Number(match[2])
+  );
+}
+
+
+// ==========================================
+// СОРТИРОВКА РАСПИСАНИЯ
+// ==========================================
+
+function trainerPosterSortSchedule(
+  rows
+) {
+  return [...(rows || [])]
+    .sort((a, b) => {
+
+      const dayDiff =
+        trainerPosterDayOrder(
+          a.day
+        ) -
+        trainerPosterDayOrder(
+          b.day
+        );
+
+      if (
+        dayDiff !== 0
+      ) {
+        return dayDiff;
+      }
+
+      return (
+        trainerPosterTimeOrder(
+          a.time
+        ) -
+        trainerPosterTimeOrder(
+          b.time
+        )
+      );
+    });
+}
+
+
+// ==========================================
+// ПЕРЕНОС ТЕКСТА
+// ==========================================
+
+function trainerPosterWrap(
+  text,
+  maxChars = 35
+) {
+  const words =
+    String(text || "")
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+
+  const lines = [];
+
+  let current = "";
+
+  for (
+    const word of words
+  ) {
+    const next =
+      current
+        ? `${current} ${word}`
+        : word;
+
+    if (
+      next.length >
+        maxChars &&
+      current
+    ) {
+      lines.push(
+        current
+      );
+
+      current = word;
+    } else {
+      current = next;
+    }
+  }
+
+  if (current) {
+    lines.push(
+      current
+    );
+  }
+
+  return lines;
+}
+
+
+// ==========================================
+// ТЕКСТОВЫЕ СТРОКИ SVG
+// ==========================================
+
+function trainerPosterLines(
+  lines,
+  x,
+  y,
+  size,
+  color,
+  weight = 700,
+  gap = 20
+) {
+  return (lines || [])
+    .map(
+      (line, index) => `
+        <text
+          x="${x}"
+          y="${y + index * gap}"
+          fill="${color}"
+          font-family="Arial, Helvetica, sans-serif"
+          font-size="${size}"
+          font-weight="${weight}"
+        >${esc(line)}</text>
+      `
+    )
+    .join("");
+}
+
+
+// ==========================================
+// НАЗВАНИЕ ЗАЛА
+// ==========================================
+
+function trainerPosterHall(
+  hall
+) {
+  if (
+    String(hall)
+      .toUpperCase() === "GYM"
+  ) {
+    return "ТРЕНАЖЕРНЫЙ";
+  }
+
+  return `ЗАЛ ${hall || ""}`;
+}
+
+
+// ==========================================
+// ШАПКА A4
+// ==========================================
+
+function trainerPosterHeader(C) {
+  return `
+    <rect
+      x="0"
+      y="0"
+      width="1240"
+      height="1754"
+      fill="${C.bg}"
+    />
+
+    <rect
+      x="0"
+      y="0"
+      width="1240"
+      height="12"
+      fill="${C.accent}"
+    />
+
+    <text
+      x="56"
+      y="70"
+      fill="${C.accent}"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="48"
+      font-weight="900"
+    >ТИТАН</text>
+
+    <text
+      x="1184"
+      y="67"
+      text-anchor="end"
+      fill="${C.muted}"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="16"
+      font-weight="800"
+      letter-spacing="2"
+    >СПОРТИВНЫЙ КОМПЛЕКС · САРАПУЛ</text>
+
+    <line
+      x1="56"
+      y1="96"
+      x2="1184"
+      y2="96"
+      stroke="${C.accent}"
+      stroke-width="4"
+    />
+
+    <text
+      x="56"
+      y="151"
+      fill="${C.text}"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="43"
+      font-weight="900"
+    >ТРЕНЕРЫ «ТИТАН»</text>
+
+    <text
+      x="56"
+      y="186"
+      fill="${C.muted}"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="18"
+      font-weight="800"
+      letter-spacing="2"
+    >АКТУАЛЬНОЕ РАСПИСАНИЕ</text>
+  `;
+}
+
+
+// ==========================================
+// ФУТЕР A4
+// ==========================================
+
+function trainerPosterFooter(C) {
+  return `
+    <line
+      x1="56"
+      y1="1690"
+      x2="1184"
+      y2="1690"
+      stroke="${C.accent}"
+      stroke-width="4"
+    />
+
+    <text
+      x="56"
+      y="1727"
+      fill="${C.muted}"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="15"
+      font-weight="800"
+    >г. Сарапул · ул. Советская, 46</text>
+
+    <text
+      x="1184"
+      y="1727"
+      text-anchor="end"
+      fill="${C.accent}"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="17"
+      font-weight="900"
+    >ТИТАН</text>
+  `;
+}
+// ==========================================
+// УМНАЯ ТАБЛИЦА РАСПИСАНИЯ ТРЕНЕРА
+// ==========================================
+
+function renderTrainerSchedule({
+  rows = [],
+  x,
+  y,
+  width,
+  height,
+  C,
+  compact = false
+}) {
+  const schedule =
+    trainerPosterSortSchedule(
+      rows
+    );
+
+  if (!schedule.length) {
+    return `
+      <rect
+        x="${x}"
+        y="${y}"
+        width="${width}"
+        height="58"
+        rx="10"
+        fill="${C.card2}"
+        stroke="${C.line}"
+        stroke-width="1"
+      />
+
+      <text
+        x="${x + 18}"
+        y="${y + 36}"
+        fill="${C.muted}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="15"
+        font-weight="700"
+      >Расписание пока не заполнено</text>
+    `;
+  }
+
+
+  const headerH =
+    compact
+      ? 28
+      : 36;
+
+  const minRowH =
+    compact
+      ? 22
+      : 31;
+
+  const maxRowH =
+    compact
+      ? 38
+      : 64;
+
+  const gap =
+    compact
+      ? 8
+      : 12;
+
+
+  // ========================================
+  // ПОДБОР КОЛИЧЕСТВА КОЛОНОК
+  // ========================================
+
+  let columns = 1;
+
+  for (
+    let testColumns = 1;
+    testColumns <= 3;
+    testColumns++
+  ) {
+    const rowsPerColumn =
+      Math.ceil(
+        schedule.length /
+        testColumns
+      );
+
+    const possibleRowH =
+      Math.floor(
+        (
+          height -
+          headerH -
+          8
+        ) /
+        rowsPerColumn
+      );
+
+    if (
+      possibleRowH >= minRowH ||
+      testColumns === 3
+    ) {
+      columns =
+        testColumns;
+
+      break;
+    }
+  }
+
+
+  const rowsPerColumn =
+    Math.ceil(
+      schedule.length /
+      columns
+    );
+
+
+  let rowH =
+    Math.floor(
+      (
+        height -
+        headerH -
+        8
+      ) /
+      rowsPerColumn
+    );
+
+
+  rowH =
+    Math.max(
+      minRowH,
+      Math.min(
+        maxRowH,
+        rowH
+      )
+    );
+
+
+  const columnWidth =
+    (
+      width -
+      gap *
+        (columns - 1)
+    ) /
+    columns;
+
+
+  let svg = "";
+
+
+  // ========================================
+  // ЗАГОЛОВКИ КОЛОНОК
+  // ========================================
+
+  for (
+    let column = 0;
+    column < columns;
+    column++
+  ) {
+    const cx =
+      x +
+      column *
+        (
+          columnWidth +
+          gap
+        );
+
+
+    svg += `
+      <rect
+        x="${cx}"
+        y="${y}"
+        width="${columnWidth}"
+        height="${headerH}"
+        rx="7"
+        fill="${C.accent}"
+      />
+
+      <text
+        x="${cx + 9}"
+        y="${y + headerH - 9}"
+        fill="${C.onAccent}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="${
+          compact
+            ? 9
+            : 12
+        }"
+        font-weight="900"
+      >ДЕНЬ</text>
+
+      <text
+        x="${cx + 57}"
+        y="${y + headerH - 9}"
+        fill="${C.onAccent}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="${
+          compact
+            ? 9
+            : 12
+        }"
+        font-weight="900"
+      >ВРЕМЯ</text>
+
+      <text
+        x="${cx + 132}"
+        y="${y + headerH - 9}"
+        fill="${C.onAccent}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="${
+          compact
+            ? 9
+            : 12
+        }"
+        font-weight="900"
+      >НАПРАВЛЕНИЕ</text>
+
+      <text
+        x="${
+          cx +
+          columnWidth -
+          9
+        }"
+        y="${y + headerH - 9}"
+        text-anchor="end"
+        fill="${C.onAccent}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="${
+          compact
+            ? 9
+            : 12
+        }"
+        font-weight="900"
+      >ЗАЛ</text>
+    `;
+  }
+
+
+  // ========================================
+  // СТРОКИ РАСПИСАНИЯ
+  // ========================================
+
+  schedule.forEach(
+    (lesson, index) => {
+      const column =
+        Math.floor(
+          index /
+          rowsPerColumn
+        );
+
+      const localIndex =
+        index %
+        rowsPerColumn;
+
+
+      const rx =
+        x +
+        column *
+          (
+            columnWidth +
+            gap
+          );
+
+
+      const ry =
+        y +
+        headerH +
+        6 +
+        localIndex *
+          rowH;
+
+
+      const fontSize =
+        compact
+          ? Math.max(
+              9,
+              Math.min(
+                13,
+                rowH * 0.4
+              )
+            )
+          : Math.max(
+              12,
+              Math.min(
+                18,
+                rowH * 0.35
+              )
+            );
+
+
+      const directionChars =
+        columns === 1
+          ? 42
+          : columns === 2
+          ? 20
+          : 12;
+
+
+      const direction =
+        trainerPosterWrap(
+          lesson.direction || "",
+          directionChars
+        )[0] || "";
+
+
+      svg += `
+        <rect
+          x="${rx}"
+          y="${ry}"
+          width="${columnWidth}"
+          height="${Math.max(
+            18,
+            rowH - 4
+          )}"
+          rx="7"
+          fill="${
+            localIndex % 2 === 0
+              ? C.card2
+              : C.card
+          }"
+          stroke="${C.line}"
+          stroke-width="1"
+        />
+
+        <text
+          x="${rx + 9}"
+          y="${
+            ry +
+            rowH / 2 +
+            5
+          }"
+          fill="${C.accent}"
+          font-family="Arial, Helvetica, sans-serif"
+          font-size="${fontSize}"
+          font-weight="900"
+        >${esc(
+          lesson.day || ""
+        )}</text>
+
+        <text
+          x="${rx + 57}"
+          y="${
+            ry +
+            rowH / 2 +
+            5
+          }"
+          fill="${C.text}"
+          font-family="Arial, Helvetica, sans-serif"
+          font-size="${fontSize}"
+          font-weight="900"
+        >${esc(
+          lesson.time || ""
+        )}</text>
+
+        <text
+          x="${rx + 132}"
+          y="${
+            ry +
+            rowH / 2 +
+            5
+          }"
+          fill="${C.text}"
+          font-family="Arial, Helvetica, sans-serif"
+          font-size="${Math.max(
+            8,
+            fontSize - 1
+          )}"
+          font-weight="800"
+        >${esc(direction)}</text>
+
+        <text
+          x="${
+            rx +
+            columnWidth -
+            9
+          }"
+          y="${
+            ry +
+            rowH / 2 +
+            5
+          }"
+          text-anchor="end"
+          fill="${C.accent}"
+          font-family="Arial, Helvetica, sans-serif"
+          font-size="${Math.max(
+            8,
+            fontSize - 1
+          )}"
+          font-weight="900"
+        >${esc(
+          trainerPosterHall(
+            lesson.hall
+          )
+        )}</text>
+      `;
+    }
+  );
+
+
+  return svg;
+}
+// ==========================================
+// ОДИН ТРЕНЕР
+// ==========================================
+
+function makePoster(
+  trainer,
+  theme = "color"
+) {
+  const C =
+    trainerPosterTheme(theme);
+
+  const W = 1240;
+  const H = 1754;
+
+  const x = 56;
+  const y = 220;
+
+  const cardW = 1128;
+  const cardH = 1440;
+
+
+  const directions =
+    Array.isArray(
+      trainer.directions
+    )
+      ? trainer.directions
+      : [];
+
+
+  const schedule =
+    Array.isArray(
+      trainer.schedule
+    )
+      ? trainer.schedule
+      : [];
+
+
+  let svg = `
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="210mm"
+      height="297mm"
+      viewBox="0 0 ${W} ${H}"
+      preserveAspectRatio="xMidYMid meet"
+    >
+
+    ${trainerPosterHeader(C)}
+
+    <rect
+      x="${x}"
+      y="${y}"
+      width="${cardW}"
+      height="${cardH}"
+      rx="24"
+      fill="${C.card}"
+      stroke="${C.line}"
+      stroke-width="2"
+    />
+
+    <rect
+      x="${x}"
+      y="${y}"
+      width="10"
+      height="${cardH}"
+      rx="5"
+      fill="${C.accent}"
+    />
+
+
+    <text
+      x="${x + 28}"
+      y="${y + 61}"
+      fill="${C.accent}"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="22"
+      font-weight="900"
+    >01</text>
+
+
+    <text
+      x="${x + 78}"
+      y="${y + 63}"
+      fill="${C.text}"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="48"
+      font-weight="900"
+    >${esc(
+      String(
+        trainer.name || ""
+      ).toUpperCase()
+    )}</text>
+
+
+    <text
+      x="${
+        x +
+        cardW -
+        28
+      }"
+      y="${y + 61}"
+      text-anchor="end"
+      fill="${C.accent}"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="24"
+      font-weight="900"
+    >${esc(
+      trainer.phone || ""
+    )}</text>
+
+
+    <line
+      x1="${x + 28}"
+      y1="${y + 88}"
+      x2="${
+        x +
+        cardW -
+        28
+      }"
+      y2="${y + 88}"
+      stroke="${C.line}"
+      stroke-width="2"
+    />
+
+
+    <text
+      x="${x + 28}"
+      y="${y + 130}"
+      fill="${C.muted}"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="18"
+      font-weight="900"
+      letter-spacing="2"
+    >НАПРАВЛЕНИЯ</text>
+  `;
+
+
+  // ========================================
+  // НАПРАВЛЕНИЯ
+  // ========================================
+
+  const visibleDirections =
+    directions.slice(0, 5);
+
+
+  const directionTop =
+    y + 150;
+
+
+  const directionH =
+    visibleDirections.length <= 2
+      ? 98
+      : visibleDirections.length <= 4
+      ? 76
+      : 64;
+
+
+  const directionGap = 9;
+
+
+  visibleDirections.forEach(
+    (direction, index) => {
+      const dy =
+        directionTop +
+        index *
+          (
+            directionH +
+            directionGap
+          );
+
+
+      const description =
+        trainerPosterWrap(
+          direction.description || "",
+          75
+        ).slice(0, 2);
+
+
+      svg += `
+        <rect
+          x="${x + 28}"
+          y="${dy}"
+          width="${cardW - 56}"
+          height="${directionH}"
+          rx="12"
+          fill="${C.card2}"
+          stroke="${C.line}"
+          stroke-width="1"
+        />
+
+        <rect
+          x="${x + 28}"
+          y="${dy}"
+          width="7"
+          height="${directionH}"
+          rx="4"
+          fill="${C.accent}"
+        />
+
+
+        <text
+          x="${x + 48}"
+          y="${dy + 28}"
+          fill="${C.accent}"
+          font-family="Arial, Helvetica, sans-serif"
+          font-size="${
+            visibleDirections.length >= 5
+              ? 19
+              : 23
+          }"
+          font-weight="900"
+        >${esc(
+          String(
+            direction.name || ""
+          ).toUpperCase()
+        )}</text>
+
+
+        ${trainerPosterLines(
+          description,
+          x + 48,
+          dy + 52,
+          visibleDirections.length >= 5
+            ? 13
+            : 15,
+          C.text,
+          700,
+          18
+        )}
+      `;
+    }
+  );
+
+
+  const directionsBottom =
+    directionTop +
+    visibleDirections.length *
+      (
+        directionH +
+        directionGap
+      );
+
+
+  const scheduleTitleY =
+    Math.max(
+      directionsBottom + 24,
+      y + 465
+    );
+
+
+  const hallsY =
+    y +
+    cardH -
+    165;
+
+
+  const scheduleY =
+    scheduleTitleY + 20;
+
+
+  const scheduleHeight =
+    hallsY -
+    scheduleY -
+    30;
+
+
+  svg += `
+    <text
+      x="${x + 28}"
+      y="${scheduleTitleY}"
+      fill="${C.muted}"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="18"
+      font-weight="900"
+      letter-spacing="2"
+    >РАСПИСАНИЕ</text>
+
+
+    ${renderTrainerSchedule({
+      rows: schedule,
+      x: x + 28,
+      y: scheduleY,
+      width: cardW - 56,
+      height: scheduleHeight,
+      C,
+      compact: false
+    })}
+
+
+    <text
+      x="${x + 28}"
+      y="${hallsY}"
+      fill="${C.muted}"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="16"
+      font-weight="900"
+      letter-spacing="2"
+    >ЗАЛЫ «ТИТАН»</text>
+
+
+    <text
+      x="${x + 28}"
+      y="${hallsY + 31}"
+      fill="${C.text}"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="13"
+      font-weight="800"
+    >1 — КРОССФИТ / БОКС · 2 — TRX / АНТИГРАВИТИ · 3 — СИЛОВОЙ ТРЕНИНГ</text>
+
+
+    <text
+      x="${x + 28}"
+      y="${hallsY + 57}"
+      fill="${C.text}"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="13"
+      font-weight="800"
+    >5 — ЙОГА / АЭРОЙОГА · GYM — ТРЕНАЖЕРНЫЙ ЗАЛ</text>
+
+
+    ${trainerPosterFooter(C)}
+
+    </svg>
+  `;
+
+
+  return svg;
+}
+
+
+// ==========================================
+// ДВА / ТРИ ТРЕНЕРА
+// ==========================================
+
+function makeMultiTrainerPoster(
+  trainers,
+  theme = "color"
+) {
+  const list =
+    Array.isArray(trainers)
+      ? trainers.slice(0, 3)
+      : [];
+
+
+  if (!list.length) {
+    throw new Error(
+      "Нет выбранных тренеров"
+    );
+  }
+
+
+  if (
+    list.length === 1
+  ) {
+    return makePoster(
+      list[0],
+      theme
+    );
+  }
+
+
+  const C =
+    trainerPosterTheme(theme);
+
+
+  const W = 1240;
+  const H = 1754;
+
+  const PAD = 56;
+
+  const count =
+    list.length;
+
+  const top = 220;
+  const bottom = 1650;
+
+
+  const gap =
+    count === 2
+      ? 24
+      : 16;
+
+
+  const cardH =
+    (
+      bottom -
+      top -
+      gap *
+        (
+          count - 1
+        )
+    ) /
+    count;
+
+
+  const cardW =
+    W -
+    PAD * 2;
+
+
+  let svg = `
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="210mm"
+      height="297mm"
+      viewBox="0 0 ${W} ${H}"
+      preserveAspectRatio="xMidYMid meet"
+    >
+
+      ${trainerPosterHeader(C)}
+  `;
+
+
+  list.forEach(
+    (trainer, trainerIndex) => {
+      const cardY =
+        top +
+        trainerIndex *
+          (
+            cardH +
+            gap
+          );
+
+
+      const innerX =
+        PAD + 26;
+
+
+      const innerW =
+        cardW - 52;
+
+
+      const directions =
+        Array.isArray(
+          trainer.directions
+        )
+          ? trainer.directions
+          : [];
+
+
+      const schedule =
+        Array.isArray(
+          trainer.schedule
+        )
+          ? trainer.schedule
+          : [];
+
+
+      const nameSize =
+        count === 2
+          ? 34
+          : 26;
+
+
+      const phoneSize =
+        count === 2
+          ? 18
+          : 14;
+
+
+      const sectionSize =
+        count === 2
+          ? 15
+          : 12;
+
+
+      svg += `
+        <rect
+          x="${PAD}"
+          y="${cardY}"
+          width="${cardW}"
+          height="${cardH}"
+          rx="21"
+          fill="${C.card}"
+          stroke="${C.line}"
+          stroke-width="2"
+        />
+
+        <rect
+          x="${PAD}"
+          y="${cardY}"
+          width="9"
+          height="${cardH}"
+          rx="5"
+          fill="${C.accent}"
+        />
+
+
+        <text
+          x="${innerX}"
+          y="${cardY + 43}"
+          fill="${C.accent}"
+          font-family="Arial, Helvetica, sans-serif"
+          font-size="${
+            count === 2
+              ? 17
+              : 13
+          }"
+          font-weight="900"
+        >${String(
+          trainerIndex + 1
+        ).padStart(
+          2,
+          "0"
+        )}</text>
+
+
+        <text
+          x="${innerX + 43}"
+          y="${cardY + 45}"
+          fill="${C.text}"
+          font-family="Arial, Helvetica, sans-serif"
+          font-size="${nameSize}"
+          font-weight="900"
+        >${esc(
+          String(
+            trainer.name || ""
+          ).toUpperCase()
+        )}</text>
+
+
+        <text
+          x="${
+            PAD +
+            cardW -
+            26
+          }"
+          y="${cardY + 43}"
+          text-anchor="end"
+          fill="${C.accent}"
+          font-family="Arial, Helvetica, sans-serif"
+          font-size="${phoneSize}"
+          font-weight="900"
+        >${esc(
+          trainer.phone || ""
+        )}</text>
+
+
+        <line
+          x1="${innerX}"
+          y1="${cardY + 64}"
+          x2="${
+            PAD +
+            cardW -
+            26
+          }"
+          y2="${cardY + 64}"
+          stroke="${C.line}"
+          stroke-width="1.5"
+        />
+      `;
+
+
+      const directionTitleY =
+        cardY +
+        (
+          count === 2
+            ? 100
+            : 87
+        );
+
+
+      svg += `
+        <text
+          x="${innerX}"
+          y="${directionTitleY}"
+          fill="${C.muted}"
+          font-family="Arial, Helvetica, sans-serif"
+          font-size="${sectionSize}"
+          font-weight="900"
+          letter-spacing="2"
+        >НАПРАВЛЕНИЯ</text>
+      `;
+
+
+      const maxDirections =
+        count === 2
+          ? 4
+          : 3;
+
+
+      const visibleDirections =
+        directions.slice(
+          0,
+          maxDirections
+        );
+
+
+      const directionGap = 8;
+
+
+      const directionCount =
+        Math.max(
+          1,
+          visibleDirections.length
+        );
+
+
+      const directionW =
+        (
+          innerW -
+          directionGap *
+            (
+              directionCount -
+              1
+            )
+        ) /
+        directionCount;
+
+
+      const directionH =
+        count === 2
+          ? 88
+          : 61;
+
+
+      visibleDirections.forEach(
+        (
+          direction,
+          directionIndex
+        ) => {
+          const dx =
+            innerX +
+            directionIndex *
+              (
+                directionW +
+                directionGap
+              );
+
+
+          const description =
+            trainerPosterWrap(
+              direction.description || "",
+              count === 2
+                ? 25
+                : 16
+            ).slice(
+              0,
+              count === 2
+                ? 2
+                : 1
+            );
+
+
+          svg += `
+            <rect
+              x="${dx}"
+              y="${
+                directionTitleY +
+                13
+              }"
+              width="${directionW}"
+              height="${directionH}"
+              rx="10"
+              fill="${C.card2}"
+              stroke="${C.line}"
+              stroke-width="1"
+            />
+
+            <rect
+              x="${dx}"
+              y="${
+                directionTitleY +
+                13
+              }"
+              width="6"
+              height="${directionH}"
+              rx="3"
+              fill="${C.accent}"
+            />
+
+
+            <text
+              x="${dx + 14}"
+              y="${
+                directionTitleY +
+                36
+              }"
+              fill="${C.accent}"
+              font-family="Arial, Helvetica, sans-serif"
+              font-size="${
+                count === 2
+                  ? 15
+                  : 11.5
+              }"
+              font-weight="900"
+            >${esc(
+              String(
+                direction.name || ""
+              ).toUpperCase()
+            )}</text>
+
+
+            ${trainerPosterLines(
+              description,
+              dx + 14,
+              directionTitleY +
+                56,
+              count === 2
+                ? 10.5
+                : 8,
+              C.text,
+              700,
+              14
+            )}
+          `;
+        }
+      );
+
+
+      const scheduleTitleY =
+        directionTitleY +
+        13 +
+        directionH +
+        (
+          count === 2
+            ? 30
+            : 22
+        );
+
+
+      const hallsY =
+        cardY +
+        cardH -
+        (
+          count === 2
+            ? 63
+            : 46
+        );
+
+
+      const scheduleY =
+        scheduleTitleY +
+        13;
+
+
+      const scheduleHeight =
+        hallsY -
+        scheduleY -
+        16;
+
+
+      svg += `
+        <text
+          x="${innerX}"
+          y="${scheduleTitleY}"
+          fill="${C.muted}"
+          font-family="Arial, Helvetica, sans-serif"
+          font-size="${sectionSize}"
+          font-weight="900"
+          letter-spacing="2"
+        >РАСПИСАНИЕ</text>
+
+
+        ${renderTrainerSchedule({
+          rows: schedule,
+          x: innerX,
+          y: scheduleY,
+          width: innerW,
+          height: scheduleHeight,
+          C,
+          compact: true
+        })}
+
+
+        <text
+          x="${innerX}"
+          y="${hallsY}"
+          fill="${C.muted}"
+          font-family="Arial, Helvetica, sans-serif"
+          font-size="${sectionSize}"
+          font-weight="900"
+          letter-spacing="2"
+        >ЗАЛЫ</text>
+
+
+        <text
+          x="${innerX + 58}"
+          y="${hallsY}"
+          fill="${C.text}"
+          font-family="Arial, Helvetica, sans-serif"
+          font-size="${
+            count === 2
+              ? 9.5
+              : 7.5
+          }"
+          font-weight="800"
+        >1 — КРОССФИТ / БОКС · 2 — TRX / АНТИГРАВИТИ · 3 — СИЛОВОЙ · 5 — ЙОГА / АЭРОЙОГА · GYM — ТРЕНАЖЕРНЫЙ</text>
+      `;
+    }
+  );
+
+
+  svg += `
+      ${trainerPosterFooter(C)}
+    </svg>
+  `;
+
+
+  return svg;
+}
+// ==========================================
+// ОБЩЕЕ РАСПИСАНИЕ — ШАПКА
+// ==========================================
+
+function weekPosterHeader(C) {
+  return `
+    <rect
+      x="0"
+      y="0"
+      width="1240"
+      height="1754"
+      fill="${C.bg}"
+    />
+
+    <rect
+      x="0"
+      y="0"
+      width="1240"
+      height="12"
+      fill="${C.accent}"
+    />
+
+    <text
+      x="56"
+      y="70"
+      fill="${C.accent}"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="48"
+      font-weight="900"
+    >ТИТАН</text>
+
+    <text
+      x="1184"
+      y="67"
+      text-anchor="end"
+      fill="${C.muted}"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="16"
+      font-weight="800"
+      letter-spacing="2"
+    >СПОРТИВНЫЙ КОМПЛЕКС · САРАПУЛ</text>
+
+    <line
+      x1="56"
+      y1="96"
+      x2="1184"
+      y2="96"
+      stroke="${C.accent}"
+      stroke-width="4"
+    />
+
+    <text
+      x="56"
+      y="151"
+      fill="${C.text}"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="43"
+      font-weight="900"
+    >ОБЩЕЕ РАСПИСАНИЕ</text>
+
+    <text
+      x="56"
+      y="186"
+      fill="${C.muted}"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="18"
+      font-weight="800"
+      letter-spacing="2"
+    >ГРУППОВЫЕ ТРЕНИРОВКИ</text>
+  `;
+}
+
+
+// ==========================================
+// ГЕНЕРАТОР ОБЩЕГО РАСПИСАНИЯ
+// ==========================================
+
+function makeWeekPoster(
+  rows,
+  theme = "color"
+) {
+  const C =
+    trainerPosterTheme(theme);
+
+  const W = 1240;
+  const H = 1754;
+
+  const PAD = 56;
+
+  const schedule =
+    trainerPosterSortSchedule(
+      Array.isArray(rows)
+        ? rows
+        : []
+    );
+
+
+  const grouped = {};
+
+
+  for (
+    const lesson of schedule
+  ) {
+    const day =
+      String(
+        lesson.day || ""
+      )
+        .trim()
+        .toUpperCase();
+
+
+    if (!grouped[day]) {
+      grouped[day] = [];
+    }
+
+
+    grouped[day].push(
+      lesson
+    );
+  }
+
+
+  const days =
+    Object.keys(grouped)
+      .sort(
+        (a, b) =>
+          trainerPosterDayOrder(a) -
+          trainerPosterDayOrder(b)
+      );
+
+
+  // ========================================
+  // РАСПРЕДЕЛЯЕМ ДНИ В ДВЕ КОЛОНКИ
+  // ========================================
+
+  const leftDays = [];
+  const rightDays = [];
+
+  let leftWeight = 0;
+  let rightWeight = 0;
+
+
+  for (
+    const day of days
+  ) {
+    const weight =
+      grouped[day].length +
+      1.2;
+
+
+    if (
+      leftWeight <=
+      rightWeight
+    ) {
+      leftDays.push(day);
+      leftWeight += weight;
+    } else {
+      rightDays.push(day);
+      rightWeight += weight;
+    }
+  }
+
+
+  const top = 220;
+  const bottom = 1605;
+
+  const columnGap = 22;
+
+  const columnWidth =
+    (
+      W -
+      PAD * 2 -
+      columnGap
+    ) / 2;
+
+
+  function renderWeekColumn(
+    dayList,
+    x
+  ) {
+    const lessonCount =
+      dayList.reduce(
+        (sum, day) =>
+          sum +
+          grouped[day].length,
+        0
+      );
+
+
+    const headersHeight =
+      dayList.length * 42;
+
+
+    const gapsHeight =
+      Math.max(
+        0,
+        dayList.length - 1
+      ) * 10;
+
+
+    const availableHeight =
+      bottom - top;
+
+
+    let rowH =
+      lessonCount
+        ? Math.floor(
+            (
+              availableHeight -
+              headersHeight -
+              gapsHeight
+            ) /
+            lessonCount
+          )
+        : 40;
+
+
+    rowH =
+      Math.max(
+        22,
+        Math.min(
+          43,
+          rowH
+        )
+      );
+
+
+    let currentY =
+      top;
+
+
+    let svg = "";
+
+
+    for (
+      const day of dayList
+    ) {
+      const lessons =
+        grouped[day];
+
+
+      svg += `
+        <rect
+          x="${x}"
+          y="${currentY}"
+          width="${columnWidth}"
+          height="34"
+          rx="9"
+          fill="${C.accent}"
+        />
+
+        <text
+          x="${x + 14}"
+          y="${currentY + 23}"
+          fill="${C.onAccent}"
+          font-family="Arial, Helvetica, sans-serif"
+          font-size="17"
+          font-weight="900"
+        >${esc(day)}</text>
+
+        <text
+          x="${
+            x +
+            columnWidth -
+            14
+          }"
+          y="${currentY + 23}"
+          text-anchor="end"
+          fill="${C.onAccent}"
+          font-family="Arial, Helvetica, sans-serif"
+          font-size="10"
+          font-weight="900"
+        >${lessons.length} ЗАН.</text>
+      `;
+
+
+      currentY += 40;
+
+
+      lessons.forEach(
+        (lesson, index) => {
+          const fontSize =
+            rowH <= 25
+              ? 9.5
+              : rowH <= 31
+              ? 11
+              : 12.5;
+
+
+          const direction =
+            trainerPosterWrap(
+              lesson.direction || "",
+              18
+            )[0] || "";
+
+
+          const trainer =
+            trainerPosterWrap(
+              lesson.trainer_name || "",
+              15
+            )[0] || "";
+
+
+          svg += `
+            <rect
+              x="${x}"
+              y="${currentY}"
+              width="${columnWidth}"
+              height="${rowH - 4}"
+              rx="7"
+              fill="${
+                index % 2 === 0
+                  ? C.card
+                  : C.card2
+              }"
+              stroke="${C.line}"
+              stroke-width="1"
+            />
+
+
+            <text
+              x="${x + 10}"
+              y="${
+                currentY +
+                rowH / 2 +
+                4
+              }"
+              fill="${C.accent}"
+              font-family="Arial, Helvetica, sans-serif"
+              font-size="${
+                fontSize + 1
+              }"
+              font-weight="900"
+            >${esc(
+              lesson.time || ""
+            )}</text>
+
+
+            <text
+              x="${x + 76}"
+              y="${
+                currentY +
+                rowH / 2 +
+                4
+              }"
+              fill="${C.text}"
+              font-family="Arial, Helvetica, sans-serif"
+              font-size="${fontSize}"
+              font-weight="800"
+            >${esc(direction)}</text>
+
+
+            <text
+              x="${x + 270}"
+              y="${
+                currentY +
+                rowH / 2 +
+                4
+              }"
+              fill="${C.muted}"
+              font-family="Arial, Helvetica, sans-serif"
+              font-size="${Math.max(
+                8,
+                fontSize - 1
+              )}"
+              font-weight="700"
+            >${esc(trainer)}</text>
+
+
+            <text
+              x="${
+                x +
+                columnWidth -
+                10
+              }"
+              y="${
+                currentY +
+                rowH / 2 +
+                4
+              }"
+              text-anchor="end"
+              fill="${C.accent}"
+              font-family="Arial, Helvetica, sans-serif"
+              font-size="${fontSize}"
+              font-weight="900"
+            >${esc(
+              trainerPosterHall(
+                lesson.hall
+              )
+            )}</text>
+          `;
+
+
+          currentY += rowH;
+        }
+      );
+
+
+      currentY += 10;
+    }
+
+
+    return svg;
+  }
+
+
+  let svg = `
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="210mm"
+      height="297mm"
+      viewBox="0 0 ${W} ${H}"
+      preserveAspectRatio="xMidYMid meet"
+    >
+
+      ${weekPosterHeader(C)}
+
+      ${renderWeekColumn(
+        leftDays,
+        PAD
+      )}
+
+      ${renderWeekColumn(
+        rightDays,
+        PAD +
+        columnWidth +
+        columnGap
+      )}
+
+
+      <text
+        x="${PAD}"
+        y="1642"
+        fill="${C.muted}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="10.5"
+        font-weight="800"
+      >1 — КРОССФИТ / БОКС · 2 — TRX / АНТИГРАВИТИ · 3 — СИЛОВОЙ · 5 — ЙОГА / АЭРОЙОГА · GYM — ТРЕНАЖЕРНЫЙ ЗАЛ</text>
+
+
+      ${trainerPosterFooter(C)}
+
+    </svg>
+  `;
+
+
+  return svg;
+}
+
+
+// ==========================================
+// ОТПРАВКА ИНФОГРАФИКИ ТРЕНЕРОВ
+// ==========================================
+
+async function sendMultiTrainerPoster(
+  chat,
+  trainerIds,
+  theme = "color"
+) {
+  const trainers =
+    await getTrainersByIds(
+      trainerIds
+    );
+
+
+  if (!trainers.length) {
+    throw new Error(
+      "Не найдены выбранные тренеры"
+    );
+  }
+
+
+  if (
+    trainers.length !==
+    trainerIds.length
+  ) {
+    throw new Error(
+      "Не удалось загрузить всех выбранных тренеров"
+    );
+  }
+
+
+  const svg =
+    makeMultiTrainerPoster(
+      trainers,
+      theme
+    );
+
+
+  const safeNames =
+    trainers
+      .map(
+        trainer =>
+          trainer.name
+      )
+      .join("_")
+      .replace(
+        /[^\p{L}\p{N}_-]+/gu,
+        "_"
+      );
+
+
+  const filename =
+    `TITAN_${safeNames}_${theme}.svg`;
+
+
+  const form =
+    new FormData();
+
+
+  form.append(
+    "chat_id",
+    String(chat)
+  );
+
+
+  form.append(
+    "document",
+    new Blob(
+      [svg],
+      {
+        type:
+          "image/svg+xml"
+      }
+    ),
+    filename
+  );
+
+
+  form.append(
+    "caption",
+    "🖼 ТИТАН — инфографика тренеров"
+  );
+
+
+  const response =
+    await fetch(
+      `${TG}/sendDocument`,
+      {
+        method: "POST",
+        body: form
+      }
+    );
+
+
+  if (!response.ok) {
+    const body =
+      await response.text();
+
+
+    throw new Error(
+      `Telegram sendDocument error: ` +
+      `${response.status} ${body}`
+    );
+  }
+
+
+  return response;
+}
+
+
+// ==========================================
+// ОТПРАВКА ОБЩЕГО РАСПИСАНИЯ
+// ==========================================
+
+async function sendWeekPoster(
+  chat,
+  theme = "color"
+) {
+  const rows =
+    await getWeekSchedule();
+
+
+  const svg =
+    makeWeekPoster(
+      rows,
+      theme
+    );
+
+
+  const filename =
+    `TITAN_WEEK_${theme}.svg`;
+
+
+  const form =
+    new FormData();
+
+
+  form.append(
+    "chat_id",
+    String(chat)
+  );
+
+
+  form.append(
+    "document",
+    new Blob(
+      [svg],
+      {
+        type:
+          "image/svg+xml"
+      }
+    ),
+    filename
+  );
+
+
+  form.append(
+    "caption",
+    "📅 ТИТАН — общее расписание"
+  );
+
+
+  const response =
+    await fetch(
+      `${TG}/sendDocument`,
+      {
+        method: "POST",
+        body: form
+      }
+    );
+
+
+  if (!response.ok) {
+    const body =
+      await response.text();
+
+
+    throw new Error(
+      `Telegram sendDocument error: ` +
+      `${response.status} ${body}`
+    );
+  }
+
+
+  return response;
+}
+
+
+// ==========================================
+// WEBHOOK
+// ==========================================
+
+module.exports =
+async function webhook(
+  req,
+  res
+) {
+  try {
+
+    // ======================================
+    // TELEGRAM РАБОТАЕТ ТОЛЬКО POST
+    // ======================================
+
+    if (
+      req.method !== "POST"
+    ) {
+      return res
+        .status(200)
+        .json({
+          ok: true,
+          service:
+            "TITAN Bot"
+        });
+    }
+
+
+    await initDatabase();
+
+
+    const update =
+      req.body || {};
+
+
+    const message =
+      update.message;
+
+
+    const query =
+      update.callback_query;
+
+
+    const chat =
+      message?.chat?.id ||
+      query?.message?.chat?.id;
+
+
+    if (!chat) {
+      return res
+        .status(200)
+        .json({
+          ok: true
+        });
+    }
+
+
+    // ======================================
+    // CALLBACK QUERY
+    // ======================================
+
+    if (
+      query?.id
+    ) {
+      await api(
+        "answerCallbackQuery",
+        {
+          callback_query_id:
+            query.id
+        }
+      ).catch(() => {});
+    }
+
+
+    // ======================================
+    // ТЕКСТОВОЕ СООБЩЕНИЕ
+    // ======================================
+
+    if (
+      message?.text
+    ) {
+      const text =
+        message.text.trim();
+
+
+      // ====================================
+      // START
+      // ====================================
+
+      if (
+        text === "/start"
+      ) {
+        await clearState(chat);
+
+
+        await sendMessage(
+          chat,
+          "🏋️ СПОРТИВНЫЙ КОМПЛЕКС «ТИТАН»\n\n" +
+          "Выберите действие:",
+          mainKeyboard()
+        );
+
+
+        return res
+          .status(200)
+          .json({
+            ok: true
+          });
+      }
+
+
+      // ====================================
+      // ОБРАБОТКА СОСТОЯНИЯ
+      // ====================================
+
+      const handled =
+        await processStateMessage(
+          chat,
+          text
+        );
+
+
+      if (handled) {
+        return res
+          .status(200)
+          .json({
+            ok: true
+          });
+      }
+
+
+      const directionHandled =
+        await processDirectionState(
+          chat,
+          text
+        );
+
+
+      if (
+        directionHandled
+      ) {
+        return res
+          .status(200)
+          .json({
+            ok: true
+          });
+      }
+
+
+      await sendMessage(
+        chat,
+        "Выберите действие:",
+        mainKeyboard()
+      );
+
+
+      return res
+        .status(200)
+        .json({
+          ok: true
+        });
+    }
+
+
+    // ======================================
+    // ЕСЛИ ЭТО НЕ CALLBACK
+    // ======================================
+
+    if (!query) {
+      return res
+        .status(200)
+        .json({
+          ok: true
+        });
+    }
+
+
+    const data =
+      query.data || "";
+
+
+    // ======================================
+    // ГЛАВНОЕ МЕНЮ
+    // ======================================
+
+    if (
+      data === "home"
+    ) {
+      await clearState(chat);
+
+
+      await sendMessage(
+        chat,
+        "🏠 ГЛАВНОЕ МЕНЮ",
+        mainKeyboard()
+      );
+
+
+      return res
+        .status(200)
+        .json({
+          ok: true
+        });
+    }
+
+
+    // ======================================
+    // СОЗДАТЬ ИНФОГРАФИКУ
+    // ======================================
+
+    if (
+      data === "create"
+    ) {
+      await clearState(chat);
+
+
+      await sendMessage(
+        chat,
+        "🖼 СОЗДАТЬ ИНФОГРАФИКУ\n\n" +
+        "Что создаём?",
+        [
+          [
+            {
+              text:
+                "👤 Тренеры",
+              callback_data:
+                "trainer_poster_menu"
+            }
+          ],
+          [
+            {
+              text:
+                "📅 Общее расписание",
+              callback_data:
+                "week"
+            }
+          ],
+          [
+            {
+              text:
+                "🏠 В меню",
+              callback_data:
+                "home"
+            }
+          ]
+        ]
+      );
+
+
+      return res
+        .status(200)
+        .json({
+          ok: true
+        });
+    }
+
+
+    // ======================================
+    // ВЫБОР КОЛИЧЕСТВА ТРЕНЕРОВ
+    // ======================================
+
+    if (
+      data ===
+      "trainer_poster_menu"
+    ) {
+      await clearState(chat);
+
+
+      await sendMessage(
+        chat,
+        "👤 Сколько тренеров разместить на одном A4?",
+        [
+          [
+            {
+              text: "1 тренер",
+              callback_data:
+                "poster_count:1"
+            }
+          ],
+          [
+            {
+              text: "2 тренера",
+              callback_data:
+                "poster_count:2"
+            }
+          ],
+          [
+            {
+              text: "3 тренера",
+              callback_data:
+                "poster_count:3"
+            }
+          ],
+          [
+            {
+              text: "⬅️ Назад",
+              callback_data:
+                "create"
+            }
+          ]
+        ]
+      );
+
+
+      return res
+        .status(200)
+        .json({
+          ok: true
+        });
+    }
+
+
+    // ======================================
+    // КОЛИЧЕСТВО ТРЕНЕРОВ
+    // ======================================
+
+    if (
+      data.startsWith(
+        "poster_count:"
+      )
+    ) {
+      const count =
+        Number(
+          data.split(":")[1]
+        );
+
+
+      if (
+        ![1, 2, 3]
+          .includes(count)
+      ) {
+        return res
+          .status(200)
+          .json({
+            ok: true
+          });
+      }
+
+
+      await setState(
+        chat,
+        "poster_select",
+        null,
+        null,
+        {
+          count,
+          selectedIds: []
+        }
+      );
+
+
+      const keyboard =
+        await trainerSelectionKeyboard(
+          "poster_select",
+          []
+        );
+
+
+      keyboard.push([
+        {
+          text:
+            "⬅️ Назад",
+          callback_data:
+            "trainer_poster_menu"
+        }
+      ]);
+
+
+      await sendMessage(
+        chat,
+        `Выберите ${count} тренер${
+          count === 1
+            ? "а"
+            : "ов"
+        }:`,
+        keyboard
+      );
+
+
+      return res
+        .status(200)
+        .json({
+          ok: true
+        });
+    }
+
+
+    // ======================================
+    // ВЫБОР ТРЕНЕРА
+    // ======================================
+
+    if (
+      data.startsWith(
+        "poster_select:"
+      )
+    ) {
+      const trainerId =
+        Number(
+          data.split(":")[1]
+        );
+
+
+      const state =
+        await getState(chat);
+
+
+      if (
+        !state ||
+        state.action !==
+          "poster_select"
+      ) {
+        await sendMessage(
+          chat,
+          "Выбор устарел. Начните создание инфографики заново.",
+          mainKeyboard()
+        );
+
+
+        return res
+          .status(200)
+          .json({
+            ok: true
+          });
+      }
+
+
+      const stateData =
+        state.data || {};
+
+
+      const count =
+        Number(
+          stateData.count || 1
+        );
+
+
+      let selectedIds =
+        Array.isArray(
+          stateData.selectedIds
+        )
+          ? stateData.selectedIds
+              .map(Number)
+          : [];
+
+
+      if (
+        selectedIds.includes(
+          trainerId
+        )
+      ) {
+        selectedIds =
+          selectedIds.filter(
+            id =>
+              id !== trainerId
+          );
+      } else {
+        if (
+          selectedIds.length <
+          count
+        ) {
+          selectedIds.push(
+            trainerId
+          );
+        }
+      }
+
+
+      await setState(
+        chat,
+        "poster_select",
+        null,
+        null,
+        {
+          count,
+          selectedIds
+        }
+      );
+
+
+      const keyboard =
+        await trainerSelectionKeyboard(
+          "poster_select",
+          selectedIds
+        );
+
+
+      if (
+        selectedIds.length ===
+        count
+      ) {
+        keyboard.push([
+          {
+            text:
+              "➡️ Продолжить",
+            callback_data:
+              "poster_theme"
+          }
+        ]);
+      }
+
+
+      keyboard.push([
+        {
+          text:
+            "⬅️ Назад",
+          callback_data:
+            "trainer_poster_menu"
+        }
+      ]);
+
+
+      await sendMessage(
+        chat,
+        `Выбрано: ${selectedIds.length}/${count}`,
+        keyboard
+      );
+
+
+      return res
+        .status(200)
+        .json({
+          ok: true
+        });
+    }
+
+
+    // ======================================
+    // ВЫБОР ЦВЕТА
+    // ======================================
+
+    if (
+      data ===
+      "poster_theme"
+    ) {
+      const state =
+        await getState(chat);
+
+
+      if (
+        !state ||
+        state.action !==
+          "poster_select"
+      ) {
+        await sendMessage(
+          chat,
+          "Выбор устарел.",
+          mainKeyboard()
+        );
+
+
+        return res
+          .status(200)
+          .json({
+            ok: true
+          });
+      }
+
+
+      const info =
+        state.data || {};
+
+
+      if (
+        !Array.isArray(
+          info.selectedIds
+        ) ||
+        info.selectedIds.length !==
+          Number(info.count)
+      ) {
+        await sendMessage(
+          chat,
+          "Сначала выберите нужное количество тренеров."
+        );
+
+
+        return res
+          .status(200)
+          .json({
+            ok: true
+          });
+      }
+
+
+      await sendMessage(
+        chat,
+        "Выберите вариант:",
+        [
+          [
+            {
+              text:
+                "🟧 Цветной",
+              callback_data:
+                "poster_generate:color"
+            },
+            {
+              text:
+                "⬜ Ч/Б",
+              callback_data:
+                "poster_generate:bw"
+            }
+          ],
+          [
+            {
+              text:
+                "🏠 В меню",
+              callback_data:
+                "home"
+            }
+          ]
+        ]
+      );
+
+
+      return res
+        .status(200)
+        .json({
+          ok: true
+        });
+    }
+
+
+    // ======================================
+    // ГЕНЕРАЦИЯ ТРЕНЕРОВ
+    // ======================================
+
+    if (
+      data.startsWith(
+        "poster_generate:"
+      )
+    ) {
+      const theme =
+        data.split(":")[1] === "bw"
+          ? "bw"
+          : "color";
+
+
+      const state =
+        await getState(chat);
+
+
+      if (
+        !state ||
+        state.action !==
+          "poster_select"
+      ) {
+        await sendMessage(
+          chat,
+          "Выбор устарел.",
+          mainKeyboard()
+        );
+
+
+        return res
+          .status(200)
+          .json({
+            ok: true
+          });
+      }
+
+
+      const info =
+        state.data || {};
+
+
+      const selectedIds =
+        Array.isArray(
+          info.selectedIds
+        )
+          ? info.selectedIds
+              .map(Number)
+          : [];
+
+
+      if (!selectedIds.length) {
+        await sendMessage(
+          chat,
+          "Тренеры не выбраны."
+        );
+
+
+        return res
+          .status(200)
+          .json({
+            ok: true
+          });
+      }
+
+
+      await sendMessage(
+        chat,
+        "⏳ Готовлю инфографику…"
+      );
+
+
+      await sendMultiTrainerPoster(
+        chat,
+        selectedIds,
+        theme
+      );
+
+
+      await clearState(chat);
+
+
+      await sendMessage(
+        chat,
+        "✅ Инфографика готова.",
+        [
+          [
+            {
+              text:
+                "🖼 Создать ещё",
+              callback_data:
+                "trainer_poster_menu"
+            }
+          ],
+          [
+            {
+              text:
+                "🏠 В меню",
+              callback_data:
+                "home"
+            }
+          ]
+        ]
+      );
+
+
+      return res
+        .status(200)
+        .json({
+          ok: true
+        });
+    }
+
+
+    // ======================================
+    // ПУБЛИЧНЫЙ СПИСОК ТРЕНЕРОВ
+    // ======================================
+
+    if (
+      data === "trainers"
+    ) {
+      const trainers =
+        await getTrainers();
+
+
+      const text =
+        trainers.length
+          ? trainers
+              .map(
+                trainer =>
+                  `👤 ${trainer.name}\n` +
+                  `📞 ${trainer.phone || "—"}`
+              )
+              .join("\n\n")
+          : "Тренеры пока не добавлены.";
+
+
+      await sendMessage(
+        chat,
+        `👤 ТРЕНЕРЫ «ТИТАН»\n\n${text}`,
+        [
+          [
+            {
+              text:
+                "🏠 В меню",
+              callback_data:
+                "home"
+            }
+          ]
+        ]
+      );
+
+
+      return res
+        .status(200)
+        .json({
+          ok: true
+        });
+    }
+
+
+    // ======================================
+    // АДМИН
+    // ======================================
+
+    if (
+      data === "admin"
+    ) {
+      await showAdmin(chat);
+
+
+      return res
+        .status(200)
+        .json({
+          ok: true
+        });
+    }
+
+
+    // ======================================
+    // СПИСОК ТРЕНЕРОВ В АДМИНКЕ
+    // ======================================
+
+    if (
+      data ===
+      "admin_trainers"
+    ) {
+      const keyboard =
+        await trainerKeyboard(
+          "admin_trainer"
+        );
+
+
+      await sendMessage(
+        chat,
+        "👤 Выберите тренера:",
+        keyboard
+      );
+
+
+      return res
+        .status(200)
+        .json({
+          ok: true
+        });
+    }
+
+
+    // ======================================
+    // КАРТОЧКА ТРЕНЕРА
+    // ======================================
+
+    if (
+      data.startsWith(
+        "admin_trainer:"
+      )
+    ) {
+      const id =
+        Number(
+          data.split(":")[1]
+        );
+
+
+      await showTrainerAdmin(
+        chat,
+        id
+      );
+
+
+      return res
+        .status(200)
+        .json({
+          ok: true
+        });
+    }
+
+
+    // ======================================
+    // ИЗМЕНИТЬ ИМЯ
+    // ======================================
+
+    if (
+      data.startsWith(
+        "edit_name:"
+      )
+    ) {
+      const trainerId =
+        Number(
+          data.split(":")[1]
+        );
+
+
+      await setState(
+        chat,
+        "edit_name",
+        trainerId
+      );
+
+
+      await sendMessage(
+        chat,
+        "Введите новое имя тренера:"
+      );
+
+
+      return res
+        .status(200)
+        .json({
+          ok: true
+        });
+    }
+
+
+    // ======================================
+    // ИЗМЕНИТЬ ТЕЛЕФОН
+    // ======================================
+
+    if (
+      data.startsWith(
+        "edit_phone:"
+      )
+    ) {
+      const trainerId =
+        Number(
+          data.split(":")[1]
+        );
+
+
+      await setState(
+        chat,
+        "edit_phone",
+        trainerId
+      );
+
+
+      await sendMessage(
+        chat,
+        "Введите новый телефон:"
+      );
+
+
+      return res
+        .status(200)
+        .json({
+          ok: true
+        });
+    }
+
+
+    // ======================================
+    // ДОБАВИТЬ ТРЕНЕРА
+    // ======================================
+
+    if (
+      data ===
+      "add_trainer"
+    ) {
+      await setState(
+        chat,
+        "add_trainer_name"
+      );
+
+
+      await sendMessage(
+        chat,
+        "Введите имя нового тренера:"
+      );
+
+
+      return res
+        .status(200)
+        .json({
+          ok: true
+        });
+    }
+
+
+    // ======================================
+    // РАСПИСАНИЕ ТРЕНЕРА
+    // ======================================
+
+    if (
+      data.startsWith(
+        "admin_schedule:"
+      )
+    ) {
+      const trainerId =
+        Number(
+          data.split(":")[1]
+        );
+
+
+      await showScheduleAdmin(
+        chat,
+        trainerId
+      );
+
+
+      return res
+        .status(200)
+        .json({
+          ok: true
+        });
+    }
+
+
+    // ======================================
+    // ЗАНЯТИЕ
+    // ======================================
+
+    if (
+      data.startsWith(
+        "lesson:"
+      )
+    ) {
+      const lessonId =
+        Number(
+          data.split(":")[1]
+        );
+
+
+      await showLessonAdmin(
+        chat,
+        lessonId
+      );
+
+
+      return res
+        .status(200)
+        .json({
+          ok: true
+        });
+    }
+
+
+    // ======================================
+    // ИЗМЕНИТЬ ДЕНЬ
+    // ======================================
+
+    if (
+      data.startsWith(
+        "lesson_day:"
+      )
+    ) {
+      const lessonId =
+        Number(
+          data.split(":")[1]
+        );
+
+
+      await setState(
+        chat,
+        "lesson_day",
+        null,
+        lessonId
+      );
+
+
+      await sendMessage(
+        chat,
+        "Введите новый день:\n" +
+        "ПН, ВТ, СР, ЧТ, ПТ, СБ или ВС"
+      );
+
+
+      return res
+        .status(200)
+        .json({
+          ok: true
+        });
+    }
+
+
+    // ======================================
+    // ИЗМЕНИТЬ ВРЕМЯ
+    // ======================================
+
+    if (
+      data.startsWith(
+        "lesson_time:"
+      )
+    ) {
+      const lessonId =
+        Number(
+          data.split(":")[1]
+        );
+
+
+      await setState(
+        chat,
+        "lesson_time",
+        null,
+        lessonId
+      );
+
+
+      await sendMessage(
+        chat,
+        "Введите новое время:"
+      );
+
+
+      return res
+        .status(200)
+        .json({
+          ok: true
+        });
+    }
+
+
+    // ======================================
+    // ИЗМЕНИТЬ НАПРАВЛЕНИЕ
+    // ======================================
+
+    if (
+      data.startsWith(
+        "lesson_direction:"
+      )
+    ) {
+      const lessonId =
+        Number(
+          data.split(":")[1]
+        );
+
+
+      await setState(
+        chat,
+        "lesson_direction",
+        null,
+        lessonId
+      );
+
+
+      await sendMessage(
+        chat,
+        "Введите новое направление:"
+      );
+
+
+      return res
+        .status(200)
+        .json({
+          ok: true
+        });
+    }
+
+
+    // ======================================
+    // ИЗМЕНИТЬ ЗАЛ
+    // ======================================
+
+    if (
+      data.startsWith(
+        "lesson_hall:"
+      )
+    ) {
+      const lessonId =
+        Number(
+          data.split(":")[1]
+        );
+
+
+      await setState(
+        chat,
+        "lesson_hall",
+        null,
+        lessonId
+      );
+
+
+      await sendMessage(
+        chat,
+        "Введите зал:\n" +
+        "1, 2, 3, 5\n" +
+        "или «Тренажерный зал»"
+      );
+
+
+      return res
+        .status(200)
+        .json({
+          ok: true
+        });
+    }
+
+
+    // ======================================
+    // УДАЛИТЬ ЗАНЯТИЕ
+    // ======================================
+
+    if (
+      data.startsWith(
+        "lesson_delete:"
+      )
+    ) {
+      const lessonId =
+        Number(
+          data.split(":")[1]
+        );
+
+
+      const rows =
+        await sql`
+          DELETE FROM schedule
+          WHERE id = ${lessonId}
+          RETURNING trainer_id
+        `;
+
+
+      if (
+        rows.length
+      ) {
+        await sendMessage(
+          chat,
+          "✅ Занятие удалено."
+        );
+
+
+        await showScheduleAdmin(
+          chat,
+          rows[0].trainer_id
+        );
+      }
+
+
+      return res
+        .status(200)
+        .json({
+          ok: true
+        });
+    }
+
+
+    // ======================================
+    // ДОБАВИТЬ ЗАНЯТИЕ
+    // ======================================
+
+    if (
+      data.startsWith(
+        "add_lesson:"
+      )
+    ) {
+      const trainerId =
+        Number(
+          data.split(":")[1]
+        );
+
+
+      await setState(
+        chat,
+        "add_lesson_day",
+        trainerId
+      );
+
+
+      await sendMessage(
+        chat,
+        "Введите день:\n" +
+        "ПН, ВТ, СР, ЧТ, ПТ, СБ или ВС"
+      );
+
+
+      return res
+        .status(200)
+        .json({
+          ok: true
+        });
+    }
+
+
+    // ======================================
+    // НАПРАВЛЕНИЯ
+    // ======================================
+
+    if (
+      data.startsWith(
+        "admin_directions:"
+      )
+    ) {
+      const trainerId =
+        Number(
+          data.split(":")[1]
+        );
+
+
+      await showDirectionsAdmin(
+        chat,
+        trainerId
+      );
+
+
+      return res
+        .status(200)
+        .json({
+          ok: true
+        });
+    }
+
+
+    // ======================================
+    // КОНКРЕТНОЕ НАПРАВЛЕНИЕ
+    // ======================================
+
+    if (
+      data.startsWith(
+        "direction:"
+      )
+    ) {
+      const directionId =
+        Number(
+          data.split(":")[1]
+        );
+
+
+      await showDirectionAdmin(
+        chat,
+        directionId
+      );
+
+
+      return res
+        .status(200)
+        .json({
+          ok: true
+        });
+    }
+
+
+    // ======================================
+    // НАЗВАНИЕ НАПРАВЛЕНИЯ
+    // ======================================
+
+    if (
+      data.startsWith(
+        "direction_name:"
+      )
+    ) {
+      const directionId =
+        Number(
+          data.split(":")[1]
+        );
+
+
+      await setState(
+        chat,
+        "direction_name",
+        null,
+        directionId
+      );
+
+
+      await sendMessage(
+        chat,
+        "Введите новое название направления:"
+      );
+
+
+      return res
+        .status(200)
+        .json({
+          ok: true
+        });
+    }
+
+
+    // ======================================
+    // ОПИСАНИЕ НАПРАВЛЕНИЯ
+    // ======================================
+
+    if (
+      data.startsWith(
+        "direction_desc:"
+      )
+    ) {
+      const directionId =
+        Number(
+          data.split(":")[1]
+        );
+
+
+      await setState(
+        chat,
+        "direction_desc",
+        null,
+        directionId
+      );
+
+
+      await sendMessage(
+        chat,
+        "Введите новое описание:"
+      );
+
+
+      return res
+        .status(200)
+        .json({
+          ok: true
+        });
+    }
+
+
+    // ======================================
+    // УДАЛИТЬ НАПРАВЛЕНИЕ
+    // ======================================
+
+    if (
+      data.startsWith(
+        "direction_delete:"
+      )
+    ) {
+      const directionId =
+        Number(
+          data.split(":")[1]
+        );
+
+
+      const rows =
+        await sql`
+          DELETE FROM directions
+          WHERE id = ${directionId}
+          RETURNING trainer_id
+        `;
+
+
+      if (
+        rows.length
+      ) {
+        await sendMessage(
+          chat,
+          "✅ Направление удалено."
+        );
+
+
+        await showDirectionsAdmin(
+          chat,
+          rows[0].trainer_id
+        );
+      }
+
+
+      return res
+        .status(200)
+        .json({
+          ok: true
+        });
+    }
+
+
+    // ======================================
+    // ДОБАВИТЬ НАПРАВЛЕНИЕ
+    // ======================================
+
+    if (
+      data.startsWith(
+        "add_direction:"
+      )
+    ) {
+      const trainerId =
+        Number(
+          data.split(":")[1]
+        );
+
+
+      await setState(
+        chat,
+        "add_direction_name",
+        trainerId
+      );
+
+
+      await sendMessage(
+        chat,
+        "Введите название нового направления:"
+      );
+
+
+      return res
+        .status(200)
+        .json({
+          ok: true
+        });
+    }
+
+
+    // ======================================
     // ОБЩЕЕ РАСПИСАНИЕ
-    // ========================================
+    // ======================================
 
-    if (data === "week") {
+    if (
+      data === "week"
+    ) {
       await sendMessage(
         chat,
         "📅 Выберите вариант общего расписания:",
         [
           [
             {
-              text: "🟧 Цветное",
+              text:
+                "🟧 Цветное",
               callback_data:
                 "week_color"
             },
             {
-              text: "⬜ Ч/Б",
+              text:
+                "⬜ Ч/Б",
               callback_data:
                 "week_bw"
             }
           ],
           [
             {
-              text: "🏠 В меню",
-              callback_data: "home"
+              text:
+                "🏠 В меню",
+              callback_data:
+                "home"
             }
           ]
         ]
       );
 
-      return res.status(200).json({
-        ok: true
-      });
+
+      return res
+        .status(200)
+        .json({
+          ok: true
+        });
     }
 
-    if (data === "week_color") {
+
+    if (
+      data ===
+      "week_color"
+    ) {
       await sendMessage(
         chat,
         "⏳ Готовлю общее расписание…"
       );
+
 
       await sendWeekPoster(
         chat,
         "color"
       );
 
+
       await sendMessage(
         chat,
         "✅ Общее расписание готово.",
         [
           [
             {
-              text: "🏠 В меню",
-              callback_data: "home"
+              text:
+                "🏠 В меню",
+              callback_data:
+                "home"
             }
           ]
         ]
       );
 
-      return res.status(200).json({
-        ok: true
-      });
+
+      return res
+        .status(200)
+        .json({
+          ok: true
+        });
     }
 
-    if (data === "week_bw") {
+
+    if (
+      data ===
+      "week_bw"
+    ) {
       await sendMessage(
         chat,
         "⏳ Готовлю общее расписание…"
       );
+
 
       await sendWeekPoster(
         chat,
         "bw"
       );
 
+
       await sendMessage(
         chat,
         "✅ Общее расписание готово.",
         [
           [
             {
-              text: "🏠 В меню",
-              callback_data: "home"
+              text:
+                "🏠 В меню",
+              callback_data:
+                "home"
             }
           ]
         ]
       );
 
-      return res.status(200).json({
-        ok: true
-      });
+
+      return res
+        .status(200)
+        .json({
+          ok: true
+        });
     }
 
-    // ========================================
+
+    // ======================================
     // НЕИЗВЕСТНАЯ КНОПКА
-    // ========================================
+    // ======================================
 
     await sendMessage(
       chat,
@@ -2575,19 +8002,33 @@ function makeMultiTrainerPoster(
       mainKeyboard()
     );
 
-    return res.status(200).json({
-      ok: true
-    });
+
+    return res
+      .status(200)
+      .json({
+        ok: true
+      });
+
 
   } catch (error) {
+
     console.error(
       "WEBHOOK ERROR:",
       error
     );
 
-    return res.status(500).json({
-      ok: false,
-      error: "Internal server error"
-    });
+
+    // ВАЖНО:
+    // Telegram всегда получает 200,
+    // чтобы не повторять одно обновление
+    // десятки раз при ошибке.
+
+    return res
+      .status(200)
+      .json({
+        ok: false,
+        error:
+          "Internal server error"
+      });
   }
 };
