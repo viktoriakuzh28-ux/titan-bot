@@ -1438,7 +1438,7 @@ function makePoster(t, theme = "color", trainerNumber = 1) {
     `;
   }).join("");
 
-  const scheduleTitleY = Math.max(790, dirY + 44);
+  const scheduleTitleY = dirY + 40;
   const scheduleTopY = scheduleTitleY + 44;
   const scheduleHeadY = scheduleTopY + 48;
 
@@ -1972,12 +1972,12 @@ function makeMultiTrainerPoster(
 
   let svg = `
   <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="210mm"
-    height="297mm"
-    viewBox="0 0 ${W} ${H}"
-    preserveAspectRatio="xMidYMid meet"
-  >
+  xmlns="http://www.w3.org/2000/svg"
+  width="210mm"
+  height="297mm"
+  viewBox="0 0 ${W} ${H}"
+  preserveAspectRatio="xMidYMid meet"
+>
 
     <rect
       width="${W}"
