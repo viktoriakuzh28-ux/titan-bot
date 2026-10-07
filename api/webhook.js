@@ -1340,109 +1340,99 @@ function makeMultiTrainerPoster(
 
   const C = {
     bg: bw ? "#ffffff" : "#090909",
-    surface: bw ? "#f3f3f3" : "#151515",
+    surface: bw ? "#f4f4f4" : "#151515",
     surface2: bw ? "#fafafa" : "#101010",
     text: bw ? "#050505" : "#ffffff",
-    muted: bw ? "#555555" : "#bdbdbd",
+    muted: bw ? "#666666" : "#bdbdbd",
     accent: bw ? "#000000" : "#ff6a00",
     line: bw ? "#cccccc" : "#333333",
-    ghost: bw ? "#eeeeee" : "#151515"
+    ghost: bw ? "#ededed" : "#151515"
   };
 
+  // ==========================================
+  // A4
+  // ==========================================
+
   const W = 1240;
-  const PAD = 60;
-  const GAP = 32;
+  const H = 1754;
 
-  const cards = trainers.map(trainer => {
-    const directions =
-      Array.isArray(trainer.directions)
-        ? trainer.directions
-        : [];
+  const PAD = 56;
 
-    const schedule =
-      Array.isArray(trainer.schedule)
-        ? trainer.schedule
-        : [];
-
-    let directionHeight = 0;
-
-    const preparedDirections =
-      directions.map(d => {
-        const name =
-          d.name || "Направление";
-
-        const description =
-          d.description || "";
-
-        const descLines =
-          description
-            ? splitText(description, 58)
-            : [];
-
-        const height =
-          42 +
-          Math.max(
-            0,
-            descLines.length * 26
-          );
-
-        directionHeight += height;
-
-        return {
-          name,
-          descLines,
-          height
-        };
-      });
-
-    if (!preparedDirections.length) {
-      directionHeight = 45;
-    }
-
-    const scheduleHeight =
-      55 +
-      Math.max(
-        1,
-        schedule.length
-      ) * 58;
-
-    const cardHeight =
-      135 +
-      directionHeight +
-      45 +
-      scheduleHeight +
-      35;
-
-    return {
-      trainer,
-      directions:
-        preparedDirections,
-      schedule,
-      cardHeight
-    };
-  });
-
-  const HEADER_H = 260;
-
-  const cardsHeight =
-    cards.reduce(
-      (sum, item) =>
-        sum + item.cardHeight,
-      0
-    ) +
+  const trainerCount =
     Math.max(
-      0,
-      cards.length - 1
-    ) * GAP;
+      1,
+      Math.min(
+        trainers.length,
+        3
+      )
+    );
 
-  const HALLS_H = 210;
-  const FOOTER_H = 120;
+  // ==========================================
+  // РАЗМЕРЫ ПОД 1 / 2 / 3 ТРЕНЕРА
+  // ==========================================
 
-  const H =
-    HEADER_H +
-    cardsHeight +
-    HALLS_H +
-    FOOTER_H;
+  const layout = {
+    1: {
+      headerH: 230,
+      cardGap: 0,
+      nameSize: 42,
+      phoneSize: 24,
+      sectionSize: 18,
+      directionNameSize: 22,
+      directionTextSize: 18,
+      rowSize: 18,
+      rowHeight: 48,
+      cardPad: 30
+    },
+
+    2: {
+      headerH: 205,
+      cardGap: 20,
+      nameSize: 32,
+      phoneSize: 20,
+      sectionSize: 16,
+      directionNameSize: 19,
+      directionTextSize: 16,
+      rowSize: 16,
+      rowHeight: 42,
+      cardPad: 24
+    },
+
+    3: {
+      headerH: 190,
+      cardGap: 14,
+      nameSize: 27,
+      phoneSize: 18,
+      sectionSize: 14,
+      directionNameSize: 17,
+      directionTextSize: 14,
+      rowSize: 14,
+      rowHeight: 36,
+      cardPad: 20
+    }
+  }[trainerCount];
+
+  const footerH = 95;
+  const hallsH = 150;
+
+  const contentH =
+    H -
+    layout.headerH -
+    footerH -
+    hallsH -
+    PAD;
+
+  const cardH =
+    (
+      contentH -
+      layout.cardGap *
+        (trainerCount - 1)
+    ) /
+    trainerCount;
+
+  // ==========================================
+  // SVG START
+  // ==========================================
 
   let svg = `
     <svg
@@ -1462,506 +1452,614 @@ function makeMultiTrainerPoster(
         x="0"
         y="0"
         width="${W}"
-        height="16"
+        height="14"
         fill="${C.accent}"
       />
 
       <text
         x="${W - PAD}"
-        y="220"
+        y="200"
         text-anchor="end"
         fill="${C.ghost}"
         font-family="Arial, Helvetica, sans-serif"
-        font-size="190"
+        font-size="175"
         font-weight="900"
       >ТИТАН</text>
 
       <text
         x="${PAD}"
-        y="82"
+        y="72"
         fill="${C.accent}"
         font-family="Arial, Helvetica, sans-serif"
-        font-size="50"
+        font-size="48"
         font-weight="900"
       >ТИТАН</text>
 
       <text
         x="${W - PAD}"
-        y="80"
+        y="70"
         text-anchor="end"
         fill="${C.muted}"
         font-family="Arial, Helvetica, sans-serif"
-        font-size="20"
+        font-size="18"
         font-weight="900"
         letter-spacing="3"
-      >ТРЕНЕРЫ И РАСПИСАНИЕ</text>
+      >СПОРТИВНЫЙ КОМПЛЕКС · САРАПУЛ</text>
 
       <line
         x1="${PAD}"
-        y1="112"
+        y1="100"
         x2="${W - PAD}"
-        y2="112"
+        y2="100"
         stroke="${C.accent}"
-        stroke-width="5"
+        stroke-width="4"
       />
 
       <text
         x="${PAD}"
-        y="180"
+        y="160"
         fill="${C.text}"
         font-family="Arial, Helvetica, sans-serif"
-        font-size="52"
+        font-size="44"
         font-weight="900"
       >ТРЕНЕРЫ «ТИТАН»</text>
 
       <text
         x="${PAD}"
-        y="220"
+        y="195"
         fill="${C.muted}"
         font-family="Arial, Helvetica, sans-serif"
-        font-size="22"
+        font-size="18"
         font-weight="800"
         letter-spacing="2"
-      >НАПРАВЛЕНИЯ · ОПИСАНИЯ · РАСПИСАНИЕ</text>
+      >НАПРАВЛЕНИЯ · РАСПИСАНИЕ · ЗАЛЫ</text>
   `;
 
-  let y = HEADER_H;
+  let y =
+    layout.headerH;
 
-  cards.forEach(
-    (item, trainerIndex) => {
-      const t = item.trainer;
-      const cardY = y;
+  // ==========================================
+  // КАРТОЧКИ ТРЕНЕРОВ
+  // ==========================================
 
-      svg += `
-        <rect
-          x="${PAD}"
-          y="${cardY}"
-          width="${W - PAD * 2}"
-          height="${item.cardHeight}"
-          rx="24"
-          fill="${C.surface}"
-          stroke="${C.line}"
-          stroke-width="2"
-        />
+  trainers
+    .slice(0, 3)
+    .forEach(
+      (trainer, index) => {
 
-        <rect
-          x="${PAD}"
-          y="${cardY}"
-          width="12"
-          height="${item.cardHeight}"
-          rx="6"
-          fill="${C.accent}"
-        />
+        const directions =
+          Array.isArray(
+            trainer.directions
+          )
+            ? trainer.directions
+            : [];
 
-        <text
-          x="${PAD + 34}"
-          y="${cardY + 48}"
-          fill="${C.accent}"
-          font-family="Arial, Helvetica, sans-serif"
-          font-size="20"
-          font-weight="900"
-        >${String(
-          trainerIndex + 1
-        ).padStart(2, "0")}</text>
+        const schedule =
+          Array.isArray(
+            trainer.schedule
+          )
+            ? trainer.schedule
+            : [];
 
-        <text
-          x="${PAD + 88}"
-          y="${cardY + 50}"
-          fill="${C.text}"
-          font-family="Arial, Helvetica, sans-serif"
-          font-size="38"
-          font-weight="900"
-        >${esc(
-          t.name
-        ).toUpperCase()}</text>
+        const cardX = PAD;
+        const cardY = y;
+        const cardW =
+          W - PAD * 2;
 
-        <text
-          x="${W - PAD - 28}"
-          y="${cardY + 48}"
-          text-anchor="end"
-          fill="${C.accent}"
-          font-family="Arial, Helvetica, sans-serif"
-          font-size="25"
-          font-weight="900"
-        >${esc(
-          t.phone || ""
-        )}</text>
+        svg += `
+          <rect
+            x="${cardX}"
+            y="${cardY}"
+            width="${cardW}"
+            height="${cardH}"
+            rx="22"
+            fill="${C.surface}"
+            stroke="${C.line}"
+            stroke-width="2"
+          />
 
-        <line
-          x1="${PAD + 34}"
-          y1="${cardY + 77}"
-          x2="${W - PAD - 28}"
-          y2="${cardY + 77}"
-          stroke="${C.line}"
-          stroke-width="2"
-        />
-      `;
+          <rect
+            x="${cardX}"
+            y="${cardY}"
+            width="10"
+            height="${cardH}"
+            rx="5"
+            fill="${C.accent}"
+          />
+        `;
 
-      let innerY =
-        cardY + 118;
+        // ======================================
+        // ИМЯ + ТЕЛЕФОН
+        // ======================================
 
-      svg += `
-        <text
-          x="${PAD + 34}"
-          y="${innerY}"
-          fill="${C.muted}"
-          font-family="Arial, Helvetica, sans-serif"
-          font-size="18"
-          font-weight="900"
-          letter-spacing="2"
-        >НАПРАВЛЕНИЯ</text>
-      `;
+        const nameY =
+          cardY +
+          layout.cardPad +
+          10;
 
-      innerY += 34;
-
-      if (
-        item.directions.length
-      ) {
-        item.directions.forEach(
-          direction => {
-            svg += `
-              <text
-                x="${PAD + 34}"
-                y="${innerY}"
-                fill="${C.accent}"
-                font-family="Arial, Helvetica, sans-serif"
-                font-size="23"
-                font-weight="900"
-              >${esc(
-                direction.name
-              )}</text>
-            `;
-
-            innerY += 28;
-
-            if (
-              direction.descLines.length
-            ) {
-              direction.descLines.forEach(
-                line => {
-                  svg += `
-                    <text
-                      x="${PAD + 34}"
-                      y="${innerY}"
-                      fill="${C.text}"
-                      font-family="Arial, Helvetica, sans-serif"
-                      font-size="19"
-                      font-weight="600"
-                    >${esc(line)}</text>
-                  `;
-
-                  innerY += 26;
-                }
-              );
-            }
-
-            innerY += 14;
-          }
-        );
-      } else {
         svg += `
           <text
-            x="${PAD + 34}"
+            x="${cardX + 34}"
+            y="${nameY}"
+            fill="${C.accent}"
+            font-family="Arial, Helvetica, sans-serif"
+            font-size="18"
+            font-weight="900"
+          >${String(
+            index + 1
+          ).padStart(2, "0")}</text>
+
+          <text
+            x="${cardX + 90}"
+            y="${nameY}"
+            fill="${C.text}"
+            font-family="Arial, Helvetica, sans-serif"
+            font-size="${layout.nameSize}"
+            font-weight="900"
+          >${esc(
+            trainer.name
+          ).toUpperCase()}</text>
+
+          <text
+            x="${W - PAD - 30}"
+            y="${nameY}"
+            text-anchor="end"
+            fill="${C.accent}"
+            font-family="Arial, Helvetica, sans-serif"
+            font-size="${layout.phoneSize}"
+            font-weight="900"
+          >${esc(
+            trainer.phone || ""
+          )}</text>
+        `;
+
+        const lineY =
+          nameY + 20;
+
+        svg += `
+          <line
+            x1="${cardX + 30}"
+            y1="${lineY}"
+            x2="${W - PAD - 30}"
+            y2="${lineY}"
+            stroke="${C.line}"
+            stroke-width="2"
+          />
+        `;
+
+        // ======================================
+        // НАПРАВЛЕНИЯ
+        // ======================================
+
+        let innerY =
+          lineY + 32;
+
+        svg += `
+          <text
+            x="${cardX + 30}"
             y="${innerY}"
             fill="${C.muted}"
             font-family="Arial, Helvetica, sans-serif"
-            font-size="19"
-            font-weight="700"
-          >Направления не добавлены</text>
+            font-size="${layout.sectionSize}"
+            font-weight="900"
+            letter-spacing="2"
+          >НАПРАВЛЕНИЯ</text>
         `;
 
-        innerY += 40;
-      }
+        innerY += 26;
 
-      innerY += 10;
+        const maxDirections =
+          trainerCount === 1
+            ? 5
+            : trainerCount === 2
+              ? 3
+              : 2;
 
-      svg += `
-        <text
-          x="${PAD + 34}"
-          y="${innerY}"
-          fill="${C.muted}"
-          font-family="Arial, Helvetica, sans-serif"
-          font-size="18"
-          font-weight="900"
-          letter-spacing="2"
-        >РАСПИСАНИЕ</text>
-      `;
+        directions
+          .slice(
+            0,
+            maxDirections
+          )
+          .forEach(
+            direction => {
 
-      innerY += 28;
+              svg += `
+                <text
+                  x="${cardX + 30}"
+                  y="${innerY}"
+                  fill="${C.accent}"
+                  font-family="Arial, Helvetica, sans-serif"
+                  font-size="${layout.directionNameSize}"
+                  font-weight="900"
+                >${esc(
+                  direction.name ||
+                  ""
+                )}</text>
+              `;
 
-      svg += `
-        <rect
-          x="${PAD + 28}"
-          y="${innerY}"
-          width="${W - PAD * 2 - 56}"
-          height="44"
-          rx="10"
-          fill="${C.accent}"
-        />
+              innerY +=
+                layout.directionNameSize +
+                6;
 
-        <text
-          x="${PAD + 48}"
-          y="${innerY + 29}"
-          fill="${
-            bw
-              ? "#ffffff"
-              : "#050505"
-          }"
-          font-family="Arial, Helvetica, sans-serif"
-          font-size="17"
-          font-weight="900"
-        >ДЕНЬ</text>
+              if (
+                trainerCount < 3 &&
+                direction.description
+              ) {
+                const lines =
+                  splitText(
+                    direction.description,
+                    trainerCount === 1
+                      ? 82
+                      : 60
+                  ).slice(
+                    0,
+                    trainerCount === 1
+                      ? 2
+                      : 1
+                  );
 
-        <text
-          x="${PAD + 145}"
-          y="${innerY + 29}"
-          fill="${
-            bw
-              ? "#ffffff"
-              : "#050505"
-          }"
-          font-family="Arial, Helvetica, sans-serif"
-          font-size="17"
-          font-weight="900"
-        >ВРЕМЯ</text>
+                lines.forEach(
+                  line => {
+                    svg += `
+                      <text
+                        x="${cardX + 30}"
+                        y="${innerY}"
+                        fill="${C.text}"
+                        font-family="Arial, Helvetica, sans-serif"
+                        font-size="${layout.directionTextSize}"
+                        font-weight="600"
+                      >${esc(
+                        line
+                      )}</text>
+                    `;
 
-        <text
-          x="${PAD + 300}"
-          y="${innerY + 29}"
-          fill="${
-            bw
-              ? "#ffffff"
-              : "#050505"
-          }"
-          font-family="Arial, Helvetica, sans-serif"
-          font-size="17"
-          font-weight="900"
-        >НАПРАВЛЕНИЕ</text>
+                    innerY +=
+                      layout.directionTextSize +
+                      5;
+                  }
+                );
+              }
 
-        <text
-          x="${W - PAD - 48}"
-          y="${innerY + 29}"
-          text-anchor="end"
-          fill="${
-            bw
-              ? "#ffffff"
-              : "#050505"
-          }"
-          font-family="Arial, Helvetica, sans-serif"
-          font-size="17"
-          font-weight="900"
-        >ЗАЛ</text>
-      `;
+              innerY += 10;
+            }
+          );
 
-      innerY += 50;
+        // ======================================
+        // РАСПИСАНИЕ
+        // ======================================
 
-      if (
-        item.schedule.length
-      ) {
-        item.schedule.forEach(
-          (s, i) => {
-            svg += `
-              <rect
-                x="${PAD + 28}"
-                y="${innerY}"
-                width="${W - PAD * 2 - 56}"
-                height="50"
-                rx="10"
-                fill="${
-                  i % 2 === 0
-                    ? C.surface2
-                    : C.surface
-                }"
-                stroke="${C.line}"
-                stroke-width="1"
-              />
+        innerY += 6;
 
-              <text
-                x="${PAD + 48}"
-                y="${innerY + 32}"
-                fill="${C.accent}"
-                font-family="Arial, Helvetica, sans-serif"
-                font-size="21"
-                font-weight="900"
-              >${esc(
-                s.day
-              )}</text>
-
-              <text
-                x="${PAD + 145}"
-                y="${innerY + 32}"
-                fill="${C.text}"
-                font-family="Arial, Helvetica, sans-serif"
-                font-size="21"
-                font-weight="900"
-              >${esc(
-                s.time
-              )}</text>
-
-              <text
-                x="${PAD + 300}"
-                y="${innerY + 32}"
-                fill="${C.text}"
-                font-family="Arial, Helvetica, sans-serif"
-                font-size="19"
-                font-weight="800"
-              >${esc(
-                s.direction
-              )}</text>
-
-              <text
-                x="${W - PAD - 48}"
-                y="${innerY + 32}"
-                text-anchor="end"
-                fill="${C.accent}"
-                font-family="Arial, Helvetica, sans-serif"
-                font-size="18"
-                font-weight="900"
-              >${esc(
-                shortHall(
-                  s.hall
-                )
-              )}</text>
-            `;
-
-            innerY += 58;
-          }
-        );
-      } else {
         svg += `
           <text
-            x="${PAD + 34}"
-            y="${innerY + 32}"
+            x="${cardX + 30}"
+            y="${innerY}"
             fill="${C.muted}"
             font-family="Arial, Helvetica, sans-serif"
-            font-size="20"
-            font-weight="700"
-          >Расписание пока не добавлено</text>
+            font-size="${layout.sectionSize}"
+            font-weight="900"
+            letter-spacing="2"
+          >РАСПИСАНИЕ</text>
         `;
+
+        innerY += 20;
+
+        // HEADER ROW
+
+        svg += `
+          <rect
+            x="${cardX + 24}"
+            y="${innerY}"
+            width="${cardW - 48}"
+            height="36"
+            rx="8"
+            fill="${C.accent}"
+          />
+
+          <text
+            x="${cardX + 42}"
+            y="${innerY + 24}"
+            fill="${
+              bw
+                ? "#ffffff"
+                : "#050505"
+            }"
+            font-family="Arial, Helvetica, sans-serif"
+            font-size="${layout.rowSize}"
+            font-weight="900"
+          >ДЕНЬ</text>
+
+          <text
+            x="${cardX + 125}"
+            y="${innerY + 24}"
+            fill="${
+              bw
+                ? "#ffffff"
+                : "#050505"
+            }"
+            font-family="Arial, Helvetica, sans-serif"
+            font-size="${layout.rowSize}"
+            font-weight="900"
+          >ВРЕМЯ</text>
+
+          <text
+            x="${cardX + 280}"
+            y="${innerY + 24}"
+            fill="${
+              bw
+                ? "#ffffff"
+                : "#050505"
+            }"
+            font-family="Arial, Helvetica, sans-serif"
+            font-size="${layout.rowSize}"
+            font-weight="900"
+          >НАПРАВЛЕНИЕ</text>
+
+          <text
+            x="${W - PAD - 42}"
+            y="${innerY + 24}"
+            text-anchor="end"
+            fill="${
+              bw
+                ? "#ffffff"
+                : "#050505"
+            }"
+            font-family="Arial, Helvetica, sans-serif"
+            font-size="${layout.rowSize}"
+            font-weight="900"
+          >ЗАЛ</text>
+        `;
+
+        innerY += 42;
+
+        const maxRows =
+          trainerCount === 1
+            ? 8
+            : trainerCount === 2
+              ? 5
+              : 3;
+
+        schedule
+          .slice(
+            0,
+            maxRows
+          )
+          .forEach(
+            (s, rowIndex) => {
+
+              svg += `
+                <rect
+                  x="${cardX + 24}"
+                  y="${innerY}"
+                  width="${cardW - 48}"
+                  height="${layout.rowHeight}"
+                  rx="7"
+                  fill="${
+                    rowIndex % 2 === 0
+                      ? C.surface2
+                      : C.surface
+                  }"
+                  stroke="${C.line}"
+                  stroke-width="1"
+                />
+
+                <text
+                  x="${cardX + 42}"
+                  y="${
+                    innerY +
+                    layout.rowHeight / 2 +
+                    6
+                  }"
+                  fill="${C.accent}"
+                  font-family="Arial, Helvetica, sans-serif"
+                  font-size="${layout.rowSize}"
+                  font-weight="900"
+                >${esc(
+                  s.day || ""
+                )}</text>
+
+                <text
+                  x="${cardX + 125}"
+                  y="${
+                    innerY +
+                    layout.rowHeight / 2 +
+                    6
+                  }"
+                  fill="${C.text}"
+                  font-family="Arial, Helvetica, sans-serif"
+                  font-size="${layout.rowSize}"
+                  font-weight="900"
+                >${esc(
+                  s.time || ""
+                )}</text>
+
+                <text
+                  x="${cardX + 280}"
+                  y="${
+                    innerY +
+                    layout.rowHeight / 2 +
+                    6
+                  }"
+                  fill="${C.text}"
+                  font-family="Arial, Helvetica, sans-serif"
+                  font-size="${layout.rowSize}"
+                  font-weight="700"
+                >${esc(
+                  s.direction || ""
+                )}</text>
+
+                <text
+                  x="${W - PAD - 42}"
+                  y="${
+                    innerY +
+                    layout.rowHeight / 2 +
+                    6
+                  }"
+                  text-anchor="end"
+                  fill="${C.accent}"
+                  font-family="Arial, Helvetica, sans-serif"
+                  font-size="${layout.rowSize}"
+                  font-weight="900"
+                >${esc(
+                  shortHall(
+                    s.hall
+                  )
+                )}</text>
+              `;
+
+              innerY +=
+                layout.rowHeight +
+                4;
+            }
+          );
+
+        y +=
+          cardH +
+          layout.cardGap;
       }
+    );
 
-      y +=
-        item.cardHeight + GAP;
-    }
-  );
+  // ==========================================
+  // ЗАЛЫ
+  // ==========================================
 
-  const hallsY = y + 10;
+  const hallsY =
+    H -
+    footerH -
+    hallsH +
+    12;
 
   svg += `
     <rect
       x="${PAD}"
       y="${hallsY}"
       width="${W - PAD * 2}"
-      height="165"
-      rx="22"
+      height="118"
+      rx="18"
       fill="${C.surface}"
       stroke="${C.line}"
       stroke-width="2"
     />
 
     <text
-      x="${PAD + 30}"
-      y="${hallsY + 42}"
+      x="${PAD + 24}"
+      y="${hallsY + 32}"
       fill="${C.accent}"
       font-family="Arial, Helvetica, sans-serif"
-      font-size="22"
+      font-size="19"
       font-weight="900"
       letter-spacing="2"
     >ЗАЛЫ «ТИТАН»</text>
 
     <text
-      x="${PAD + 30}"
-      y="${hallsY + 78}"
-      fill="${C.text}"
-      font-family="Arial, Helvetica, sans-serif"
-      font-size="20"
-      font-weight="800"
-    >ЗАЛ 1 — ${esc(
-      hallNames["1"]
-    )}</text>
+      x="${PAD + 430}"
 
-    <text
-      x="${PAD + 30}"
-      y="${hallsY + 112}"
-      fill="${C.text}"
-      font-family="Arial, Helvetica, sans-serif"
-      font-size="20"
-      font-weight="800"
-    >ЗАЛ 2 — ${esc(
-      hallNames["2"]
-    )}</text>
+      y="${hallsY + 94}"
 
-    <text
-      x="${PAD + 600}"
-      y="${hallsY + 78}"
       fill="${C.text}"
-      font-family="Arial, Helvetica, sans-serif"
-      font-size="20"
-      font-weight="800"
-    >ЗАЛ 3 — ${esc(
-      hallNames["3"]
-    )}</text>
 
-    <text
-      x="${PAD + 600}"
-      y="${hallsY + 112}"
-      fill="${C.text}"
       font-family="Arial, Helvetica, sans-serif"
-      font-size="20"
+
+      font-size="16"
+
       font-weight="800"
-    >ЗАЛ 5 — ${esc(
+
+    >5 — ${esc(
+
       hallNames["5"]
+
     )}</text>
 
     <text
-      x="${PAD + 30}"
-      y="${hallsY + 145}"
+
+      x="${PAD + 830}"
+
+      y="${hallsY + 67}"
+
       fill="${C.text}"
+
       font-family="Arial, Helvetica, sans-serif"
-      font-size="20"
+
+      font-size="16"
+
       font-weight="800"
-    >ТРЕНАЖЕРНЫЙ ЗАЛ — ${esc(
+
+    >GYM — ${esc(
+
       hallNames.GYM
+
     )}</text>
+
   `;
 
+  // ==========================================
+
+  // FOOTER
+
+  // ==========================================
+
   const footerY =
-    H - 70;
+
+    H - 40;
 
   svg += `
+
     <text
+
       x="${PAD}"
+
       y="${footerY}"
+
       fill="${C.muted}"
+
       font-family="Arial, Helvetica, sans-serif"
-      font-size="20"
+
+      font-size="18"
+
       font-weight="800"
+
     >г. Сарапул · ул. Советская, 46</text>
 
     <text
+
       x="${W - PAD}"
+
       y="${footerY}"
+
       text-anchor="end"
+
       fill="${C.accent}"
+
       font-family="Arial, Helvetica, sans-serif"
-      font-size="22"
+
+      font-size="20"
+
       font-weight="900"
+
     >ТИТАН · САРАПУЛ</text>
 
     <line
+
       x1="${PAD}"
-      y1="${footerY + 25}"
+
+      y1="${footerY + 18}"
+
       x2="${W - PAD}"
-      y2="${footerY + 25}"
+
+      y2="${footerY + 18}"
+
       stroke="${C.accent}"
-      stroke-width="6"
+
+      stroke-width="5"
+
     />
 
     </svg>
+
   `;
 
   return svg;
-}
+  }
 
 // ==========================================
 // ОБЩЕЕ РАСПИСАНИЕ — ИНФОГРАФИКА
