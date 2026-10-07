@@ -148,6 +148,29 @@ async function initDatabase() {
     )
   `;
 
+  // Обновление старой таблицы bot_state
+  // Эти команды безопасны: существующие данные не удаляются.
+
+  await sql`
+    ALTER TABLE bot_state
+    ADD COLUMN IF NOT EXISTS trainer_id INTEGER
+  `;
+
+  await sql`
+    ALTER TABLE bot_state
+    ADD COLUMN IF NOT EXISTS item_id INTEGER
+  `;
+
+  await sql`
+    ALTER TABLE bot_state
+    ADD COLUMN IF NOT EXISTS data JSONB DEFAULT '{}'::jsonb
+  `;
+
+  await sql`
+    ALTER TABLE bot_state
+    ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()
+  `;
+
 
   const countRows =
     await sql`
