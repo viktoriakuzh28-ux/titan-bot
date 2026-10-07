@@ -1,12 +1,22 @@
 // ============================================================
 // БЛОК 1
-// ТИТАН BOT — БАЗА ДАННЫХ, TELEGRAM, АДМИНКА, СОСТОЯНИЯ
+// ТИТАН BOT
+// БАЗА ДАННЫХ · TELEGRAM · СОСТОЯНИЯ · АДМИНКА
 // ============================================================
 
 const { neon } = require("@neondatabase/serverless");
 const QRCode = require("qrcode");
 
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+
+if (!TOKEN) {
+  throw new Error("TELEGRAM_BOT_TOKEN is not configured");
+}
+
+if (!process.env.DATABASE_URL) {
+  throw new Error("DATABASE_URL is not configured");
+}
+
 const TG = `https://api.telegram.org/bot${TOKEN}`;
 const sql = neon(process.env.DATABASE_URL);
 
@@ -15,78 +25,71 @@ const sql = neon(process.env.DATABASE_URL);
 // TELEGRAM API
 // ============================================================
 
-async function api(method, body) {
-  const response = await fetch(`${TG}/${method}`, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json"
-    },
-    body: JSON.stringify(body)
-  });
+async function api(method, payload = {}) {
 
-  if (!response.ok) {
-    const errorText = await response.text();
+  const response = await fetch(
+    `${TG}/${method}`,
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    }
+  );
+
+  const data = await response.json();
+
+  if (!data.ok) {
     throw new Error(
-      `Telegram ${method}: ${response.status} ${errorText}`
+      `${method}: ${JSON.stringify(data)}`
     );
   }
 
-  return response.json();
+  return data.result;
 }
 
 
-async function sendMessage(chat, text, keyboard = null) {
-  return api("sendMessage", {
+async function sendMessage(
+  chat,
+  text,
+  keyboard = null
+) {
+
+  const payload = {
     chat_id: chat,
     text,
-    reply_markup: keyboard
-      ? {
-          inline_keyboard: keyboard
-        }
-      : undefined
-  });
+    disable_web_page_preview: true
+  };
+
+  if (keyboard) {
+
+    payload.reply_markup = {
+      inline_keyboard: keyboard
+    };
+  }
+
+  return api(
+    "sendMessage",
+    payload
+  );
 }
 
 
 // ============================================================
-// ОБЩИЕ ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+// XML / SVG ESCAPE
 // ============================================================
 
-function esc(value = "") {
-  return String(value)
+function esc(value) {
+
+  return String(
+    value ?? ""
+  )
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
-
-function normalizeHall(value = "") {
-  const text = String(value).trim();
-
-  if (
-    /^gym$/i.test(text) ||
-    /тренаж/i.test(text)
-  ) {
-    return "GYM";
-  }
-
-  const number = text.replace(/[^\d]/g, "");
-
-  if (["1", "2", "3", "5"].includes(number)) {
-    return number;
-  }
-
-  return "";
-}
-
-
-function hallText(hall) {
-  if (String(hall).toUpperCase() === "GYM") {
-    return "Тренажерный зал";
-  }
-
-  return `Зал ${hall}`;
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
 }
 
 
@@ -112,7 +115,6 @@ async function initDatabase() {
       trainer_id INTEGER NOT NULL
         REFERENCES trainers(id)
         ON DELETE CASCADE,
-
       name TEXT NOT NULL,
       description TEXT DEFAULT '',
       sort_order INTEGER DEFAULT 0
@@ -126,7 +128,6 @@ async function initDatabase() {
       trainer_id INTEGER NOT NULL
         REFERENCES trainers(id)
         ON DELETE CASCADE,
-
       day TEXT NOT NULL,
       time TEXT NOT NULL,
       direction TEXT NOT NULL,
@@ -138,389 +139,673 @@ async function initDatabase() {
 
   await sql`
     CREATE TABLE IF NOT EXISTS bot_state (
-      chat_id BIGINT PRIMARY KEY,
+      chat_id TEXT PRIMARY KEY,
       action TEXT,
       trainer_id INTEGER,
-      schedule_id INTEGER,
-      data JSONB DEFAULT '{}'::jsonb
+      item_id INTEGER,
+      data JSONB DEFAULT '{}'::jsonb,
+      updated_at TIMESTAMPTZ DEFAULT NOW()
     )
   `;
 
 
-  const count = await sql`
-    SELECT COUNT(*)::int AS count
-    FROM trainers
-  `;
+  const countRows =
+    await sql`
+      SELECT COUNT(*)::int AS count
+      FROM trainers
+    `;
 
-  if (Number(count[0].count) === 0) {
+
+  const count =
+    Number(
+      countRows[0]?.count || 0
+    );
+
+
+  if (count === 0) {
     await seedDatabase();
   }
 }
 
 
 // ============================================================
-// ПЕРВИЧНЫЕ ДАННЫЕ
-// Используются ТОЛЬКО если база полностью пустая
+// НАЧАЛЬНЫЕ ДАННЫЕ
+// Заполняются только если таблица trainers пустая.
+// Существующие данные пользователя не перезаписываются.
 // ============================================================
 
 async function seedDatabase() {
 
-  const seed = [
-
-    // --------------------------------------------------------
-    // ЖИЖИНА ЭЛЬВИРА
-    // --------------------------------------------------------
-
-    {
-      name: "Жижина Эльвира",
-      phone: "+7 (904) 278-52-01",
-
-      directions: [
-        [
-          "Хатха-йога",
-          "Практика для развития гибкости, силы, баланса и снятия напряжения."
-        ],
-
-        [
-          "Йога в гамаках",
-          "Практика в гамаках для мобильности, разгрузки позвоночника и контроля тела."
-        ]
-      ],
-
-      schedule: [
-        ["СР", "07:30", "Хатха-йога", "5"],
-        ["СР", "09:00", "Йога в гамаках", "2"],
-        ["ПТ", "07:30", "Хатха-йога", "5"],
-        ["ПТ", "09:00", "Йога в гамаках", "2"]
-      ]
-    },
-
-
-    // --------------------------------------------------------
-    // ФРОЛОВА ЕКАТЕРИНА
-    // --------------------------------------------------------
-
-    {
-      name: "Фролова Екатерина",
-      phone: "+7 (988) 095-26-91",
-
-      directions: [
-        [
-          "Йога",
-          "Практика для развития гибкости, укрепления тела, восстановления и внутреннего баланса."
-        ]
-      ],
-
-      schedule: [
-        ["СБ", "08:00", "Йога", "5"]
-      ]
-    },
-
-
-    // --------------------------------------------------------
-    // ЗОРИНА АННА
-    // --------------------------------------------------------
-
-    {
-      name: "Зорина Анна",
-      phone: "+7 912 855-31-91",
-
-      directions: [
-        [
-          "Йога",
-          "Практика для гибкости, восстановления, осознанности и улучшения самочувствия."
-        ]
-      ],
-
-      schedule: [
-        ["ПН", "09:00", "Йога", "5"],
-        ["ВС", "15:00–19:00", "Йога", "2"]
-      ]
-    },
-
-
-    // --------------------------------------------------------
-    // ЧУПИНА СВЕТЛАНА
-    // --------------------------------------------------------
-
-    {
-      name: "Чупина Светлана",
-      phone: "+7 982 828-38-27",
-
-      directions: [
-        [
-          "TRX",
-          "Функциональные тренировки с собственным весом."
-        ],
-
-        [
-          "Силовой фитнес",
-          "Укрепление мышц и повышение выносливости."
-        ],
-
-        [
-          "Растяжка",
-          "Развитие гибкости, улучшение осанки и снятие напряжения."
-        ],
-
-        [
-          "Мышечно-суставная гимнастика",
-          "Развитие подвижности суставов и профилактика травм."
-        ],
-
-        [
-          "Фитнес-йога",
-          "Силовые упражнения, растяжка и дыхательные практики."
-        ]
-      ],
-
-      schedule: [
-        ["ПН", "17:00", "TRX", "2"],
-        ["ПН", "18:00", "Силовой фитнес", "3"],
-        ["ПН", "19:00", "Растяжка", "3"],
-        ["ПН", "20:00", "Фитнес-йога", "2"],
-
-        ["ВТ", "09:00", "Силовой фитнес", "3"],
-        ["ВТ", "10:00", "Мышечно-суставная гимнастика", "2"],
-
-        ["СР", "17:00", "Силовой фитнес", "3"],
-        ["СР", "18:00", "Силовой фитнес", "3"],
-        ["СР", "19:00", "TRX", "2"],
-        ["СР", "20:00", "Фитнес-йога", "2"],
-
-        ["ЧТ", "09:00", "Силовой фитнес", "3"],
-        ["ЧТ", "10:00", "Растяжка", "2"],
-
-        ["ПТ", "17:00", "Растяжка", "2"],
-        ["ПТ", "18:00", "TRX", "2"],
-        ["ПТ", "19:00", "Растяжка", "2"]
-      ]
-    },
-
-
-    // --------------------------------------------------------
-    // ФЕДОРЕНКО ОЛЬГА
-    // --------------------------------------------------------
-
-    {
-      name: "Федоренко Ольга",
-      phone: "+7 904 247-08-15",
-
-      directions: [
-        [
-          "Силовой тренинг",
-          "Развитие силы, укрепление мышц и улучшение физической формы."
-        ],
-
-        [
-          "Кроссфит",
-          "Интенсивная функциональная тренировка силы и выносливости."
-        ],
-
-        [
-          "Функционал",
-          "Комплексная функциональная тренировка всего тела."
-        ],
-
-        [
-          "Тренажерный зал",
-          "Силовые тренировки на тренажерах и со свободными весами."
-        ]
-      ],
-
-      schedule: [
-        ["ПН", "11:00", "Силовой тренинг", "3"],
-        ["ПН", "18:30", "Кроссфит", "1"],
-
-        ["ВТ", "10:00", "Функционал", "3"],
-        ["ВТ", "19:00", "Силовой тренинг", "3"],
-        ["ВТ", "20:00", "Тренажерный зал", "GYM"],
-
-        ["СР", "10:00", "Силовой тренинг", "3"],
-
-        ["ЧТ", "10:00", "Функционал", "3"],
-        ["ЧТ", "19:00", "Силовой тренинг", "3"],
-        ["ЧТ", "20:00", "Тренажерный зал", "GYM"],
-
-        ["ПТ", "10:00", "Кроссфит", "1"],
-
-        ["СБ", "09:00", "Кроссфит", "1"]
-      ]
-    },
-
-
-    // --------------------------------------------------------
-    // ИЖБОЛДИНА НАТАЛЬЯ
-    // --------------------------------------------------------
-
-    {
-      name: "Ижболдина Наталья",
-      phone: "+7 982 837-57-69",
-
-      directions: [
-        [
-          "Динамическая растяжка",
-          "Гибкость, улучшение осанки, восстановление и профилактика травм."
-        ]
-      ],
-
-      schedule: [
-        ["ВТ", "19:00", "Динамическая растяжка", "5"],
-        ["ЧТ", "19:00", "Динамическая растяжка", "5"],
-        ["ВС", "11:00", "Динамическая растяжка", "5"]
-      ]
-    },
-
-
-    // --------------------------------------------------------
-    // СОЛОДОВА АЛЁНА
-    // --------------------------------------------------------
-
-    {
-      name: "Солодова Алёна",
-      phone: "+7 982 127-49-22",
-
-      directions: [
-        [
-          "Джампинг",
-          "Кардио на мини-батутах: выносливость, координация и энергия."
-        ]
-      ],
-
-      schedule: [
-        ["ВТ", "18:00", "Джампинг", "3"],
-        ["ЧТ", "18:00", "Джампинг", "3"]
-      ]
-    },
-
-
-    // --------------------------------------------------------
-    // КУШНИР АННА
-    // --------------------------------------------------------
-
-    {
-      name: "Кушнир Анна",
-      phone: "+7 912 769-85-05",
-
-      directions: [
-        [
-          "Силовой тренинг",
-          "Укрепление мышц, развитие силы и выносливости."
-        ],
-
-        [
-          "Функционал",
-          "Функциональная работа на силу, координацию и выносливость."
-        ]
-      ],
-
-      schedule: [
-        ["СР", "18:00", "Силовой тренинг", "2"],
-        ["ПТ", "18:00", "Функционал", "1"],
-        ["ВС", "11:00", "Функционал", "1"]
-      ]
-    },
-
-
-    // --------------------------------------------------------
-    // ВАСИЛЬЧЕВСКАЯ ЕВГЕНИЯ
-    // --------------------------------------------------------
-
-    {
-      name: "Васильчевская Евгения",
-      phone: "+7 (914) 936-82-32",
-
-      directions: [
-        [
-          "Зумба",
-          "Танцевальный фитнес: кардио, координация, выносливость и энергия."
-        ]
-      ],
-
-      schedule: [
-        ["ПТ", "18:30", "Зумба", "3"]
-      ]
-    }
-
-  ];
-
-
-  for (let i = 0; i < seed.length; i++) {
-
-    const trainer = seed[i];
-
-    const inserted = await sql`
-      INSERT INTO trainers (
-        name,
-        phone,
-        sort_order
-      )
-      VALUES (
-        ${trainer.name},
-        ${trainer.phone},
-        ${i}
-      )
+  // ----------------------------------------------------------
+  // 1. ЖИЖИНА ЭЛЬВИРА
+  // ----------------------------------------------------------
+
+  const [zhizhina] =
+    await sql`
+      INSERT INTO trainers
+        (name, phone, sort_order)
+      VALUES
+        (
+          'Жижина Эльвира',
+          '+7 (904) 278-52-01',
+          1
+        )
       RETURNING id
     `;
 
-    const trainerId = inserted[0].id;
+
+  await sql`
+    INSERT INTO directions
+      (
+        trainer_id,
+        name,
+        description,
+        sort_order
+      )
+    VALUES
+      (
+        ${zhizhina.id},
+        'Хатха-йога',
+        'Спокойная практика: гибкость, укрепление тела и снятие стресса.',
+        1
+      ),
+      (
+        ${zhizhina.id},
+        'Йога в гамаках',
+        'Практика в гамаках: мобильность, разгрузка и контроль тела.',
+        2
+      )
+  `;
 
 
-    for (
-      let directionIndex = 0;
-      directionIndex < trainer.directions.length;
-      directionIndex++
-    ) {
+  await sql`
+    INSERT INTO schedule
+      (
+        trainer_id,
+        day,
+        time,
+        direction,
+        hall,
+        sort_order
+      )
+    VALUES
+      (
+        ${zhizhina.id},
+        'СР',
+        '07:30',
+        'Хатха-йога',
+        '5',
+        1
+      ),
+      (
+        ${zhizhina.id},
+        'СР',
+        '09:00',
+        'Йога в гамаках',
+        '2',
+        2
+      ),
+      (
+        ${zhizhina.id},
+        'ПТ',
+        '07:30',
+        'Хатха-йога',
+        '5',
+        3
+      ),
+      (
+        ${zhizhina.id},
+        'ПТ',
+        '09:00',
+        'Йога в гамаках',
+        '2',
+        4
+      )
+  `;
 
-      const direction =
-        trainer.directions[directionIndex];
 
-      await sql`
-        INSERT INTO directions (
+  // ----------------------------------------------------------
+  // 2. ФРОЛОВА ЕКАТЕРИНА
+  // ----------------------------------------------------------
+
+  const [frolova] =
+    await sql`
+      INSERT INTO trainers
+        (name, phone, sort_order)
+      VALUES
+        (
+          'Фролова Екатерина',
+          '+7 (988) 095-26-91',
+          2
+        )
+      RETURNING id
+    `;
+
+
+  await sql`
+    INSERT INTO directions
+      (
+        trainer_id,
+        name,
+        description,
+        sort_order
+      )
+    VALUES
+      (
+        ${frolova.id},
+        'Кундалини-йога',
+        'Практика для развития осознанности и гармонизации тела и ума.',
+        1
+      )
+  `;
+
+
+  await sql`
+    INSERT INTO schedule
+      (
+        trainer_id,
+        day,
+        time,
+        direction,
+        hall,
+        sort_order
+      )
+    VALUES
+      (
+        ${frolova.id},
+        'СБ',
+        '08:00',
+        'Кундалини-йога',
+        '5',
+        1
+      )
+  `;
+
+
+  // ----------------------------------------------------------
+  // 3. ЗОРИНА АННА
+  // ----------------------------------------------------------
+
+  const [zorina] =
+    await sql`
+      INSERT INTO trainers
+        (name, phone, sort_order)
+      VALUES
+        (
+          'Зорина Анна',
+          '+7 912 855-31-91',
+          3
+        )
+      RETURNING id
+    `;
+
+
+  await sql`
+    INSERT INTO directions
+      (
+        trainer_id,
+        name,
+        description,
+        sort_order
+      )
+    VALUES
+      (
+        ${zorina.id},
+        'Йога',
+        'Практика для развития гибкости, баланса, силы и осознанности.',
+        1
+      )
+  `;
+
+
+  await sql`
+    INSERT INTO schedule
+      (
+        trainer_id,
+        day,
+        time,
+        direction,
+        hall,
+        sort_order
+      )
+    VALUES
+      (
+        ${zorina.id},
+        'ПН',
+        '09:00',
+        'Йога',
+        '5',
+        1
+      ),
+      (
+        ${zorina.id},
+        'ВС',
+        '15:00–19:00',
+        'Йога',
+        '2',
+        2
+      )
+  `;
+
+
+  // ----------------------------------------------------------
+  // 4. ЧУПИНА СВЕТЛАНА
+  // ----------------------------------------------------------
+
+  const [chupina] =
+    await sql`
+      INSERT INTO trainers
+        (name, phone, sort_order)
+      VALUES
+        (
+          'Чупина Светлана',
+          '+7 982 828-38-27',
+          4
+        )
+      RETURNING id
+    `;
+
+
+  const chupinaDirections = [
+    [
+      "TRX",
+      "Функциональная тренировка с использованием подвесных петель."
+    ],
+    [
+      "Силовой фитнес",
+      "Силовая тренировка для развития мышц, выносливости и тонуса."
+    ],
+    [
+      "Растяжка",
+      "Работа над гибкостью, мобильностью и восстановлением."
+    ],
+    [
+      "Мышечно-суставная гимнастика",
+      "Комплекс упражнений для мобильности суставов и комфортного движения."
+    ],
+    [
+      "Фитнес-йога",
+      "Сочетание элементов йоги и функциональной физической нагрузки."
+    ]
+  ];
+
+
+  for (
+    let i = 0;
+    i < chupinaDirections.length;
+    i++
+  ) {
+
+    const [
+      name,
+      description
+    ] = chupinaDirections[i];
+
+
+    await sql`
+      INSERT INTO directions
+        (
           trainer_id,
           name,
           description,
           sort_order
         )
-        VALUES (
-          ${trainerId},
-          ${direction[0]},
-          ${direction[1]},
-          ${directionIndex}
+      VALUES
+        (
+          ${chupina.id},
+          ${name},
+          ${description},
+          ${i + 1}
         )
-      `;
-    }
+    `;
+  }
 
 
-    for (
-      let scheduleIndex = 0;
-      scheduleIndex < trainer.schedule.length;
-      scheduleIndex++
-    ) {
+  // ----------------------------------------------------------
+  // 5. ФЕДОРЕНКО ОЛЬГА
+  // ----------------------------------------------------------
 
-      const lesson =
-        trainer.schedule[scheduleIndex];
+  const [fedorenko] =
+    await sql`
+      INSERT INTO trainers
+        (name, phone, sort_order)
+      VALUES
+        (
+          'Федоренко Ольга',
+          '+7 904 247-08-15',
+          5
+        )
+      RETURNING id
+    `;
 
-      await sql`
-        INSERT INTO schedule (
+
+  const fedorenkoDirections = [
+    [
+      "Силовой тренинг",
+      "Силовая работа для развития мышц, выносливости и общей физической формы."
+    ],
+    [
+      "Кроссфит",
+      "Интенсивная функциональная тренировка с сочетанием силовых и кардиоэлементов."
+    ],
+    [
+      "Функционал",
+      "Функциональная тренировка для силы, координации и выносливости."
+    ],
+    [
+      "Тренажерный зал",
+      "Персональная работа в тренажёрном зале."
+    ]
+  ];
+
+
+  for (
+    let i = 0;
+    i < fedorenkoDirections.length;
+    i++
+  ) {
+
+    const [
+      name,
+      description
+    ] = fedorenkoDirections[i];
+
+
+    await sql`
+      INSERT INTO directions
+        (
           trainer_id,
-          day,
-          time,
-          direction,
-          hall,
+          name,
+          description,
           sort_order
         )
-        VALUES (
-          ${trainerId},
-          ${lesson[0]},
-          ${lesson[1]},
-          ${lesson[2]},
-          ${lesson[3]},
-          ${scheduleIndex}
+      VALUES
+        (
+          ${fedorenko.id},
+          ${name},
+          ${description},
+          ${i + 1}
         )
-      `;
-    }
+    `;
   }
+
+
+  // ----------------------------------------------------------
+  // 6. ИЖБОЛДИНА НАТАЛЬЯ
+  // ----------------------------------------------------------
+
+  const [izhboldina] =
+    await sql`
+      INSERT INTO trainers
+        (name, phone, sort_order)
+      VALUES
+        (
+          'Ижболдина Наталья',
+          '+7 982 837-57-69',
+          6
+        )
+      RETURNING id
+    `;
+
+
+  await sql`
+    INSERT INTO directions
+      (
+        trainer_id,
+        name,
+        description,
+        sort_order
+      )
+    VALUES
+      (
+        ${izhboldina.id},
+        'Динамическая растяжка',
+        'Активная работа над гибкостью, мобильностью и свободой движения.',
+        1
+      )
+  `;
+
+
+  await sql`
+    INSERT INTO schedule
+      (
+        trainer_id,
+        day,
+        time,
+        direction,
+        hall,
+        sort_order
+      )
+    VALUES
+      (
+        ${izhboldina.id},
+        'ВТ',
+        '19:00',
+        'Динамическая растяжка',
+        '5',
+        1
+      ),
+      (
+        ${izhboldina.id},
+        'ЧТ',
+        '19:00',
+        'Динамическая растяжка',
+        '5',
+        2
+      ),
+      (
+        ${izhboldina.id},
+        'ВС',
+        '11:00',
+        'Динамическая растяжка',
+        '5',
+        3
+      )
+  `;
+
+
+  // ----------------------------------------------------------
+  // 7. СОЛОДОВА АЛЁНА
+  // ----------------------------------------------------------
+
+  const [solodova] =
+    await sql`
+      INSERT INTO trainers
+        (name, phone, sort_order)
+      VALUES
+        (
+          'Солодова Алёна',
+          '+7 982 127-49-22',
+          7
+        )
+      RETURNING id
+    `;
+
+
+  await sql`
+    INSERT INTO directions
+      (
+        trainer_id,
+        name,
+        description,
+        sort_order
+      )
+    VALUES
+      (
+        ${solodova.id},
+        'Джампинг',
+        'Кардиотренировка на мини-батутах: энергия, координация и выносливость.',
+        1
+      )
+  `;
+
+
+  await sql`
+    INSERT INTO schedule
+      (
+        trainer_id,
+        day,
+        time,
+        direction,
+        hall,
+        sort_order
+      )
+    VALUES
+      (
+        ${solodova.id},
+        'ВТ',
+        '18:00',
+        'Джампинг',
+        '3',
+        1
+      ),
+      (
+        ${solodova.id},
+        'ЧТ',
+        '18:00',
+        'Джампинг',
+        '3',
+        2
+      )
+  `;
+
+
+  // ----------------------------------------------------------
+  // 8. КУШНИР АННА
+  // ----------------------------------------------------------
+
+  const [kushnir] =
+    await sql`
+      INSERT INTO trainers
+        (name, phone, sort_order)
+      VALUES
+        (
+          'Кушнир Анна',
+          '+7 912 769-85-05',
+          8
+        )
+      RETURNING id
+    `;
+
+
+  await sql`
+    INSERT INTO directions
+      (
+        trainer_id,
+        name,
+        description,
+        sort_order
+      )
+    VALUES
+      (
+        ${kushnir.id},
+        'Силовой тренинг',
+        'Силовая работа для развития мышц и общей физической формы.',
+        1
+      ),
+      (
+        ${kushnir.id},
+        'Функционал',
+        'Функциональная тренировка на силу, координацию и выносливость.',
+        2
+      )
+  `;
+
+
+  await sql`
+    INSERT INTO schedule
+      (
+        trainer_id,
+        day,
+        time,
+        direction,
+        hall,
+        sort_order
+      )
+    VALUES
+      (
+        ${kushnir.id},
+        'СР',
+        '18:00',
+        'Силовой тренинг',
+        '2',
+        1
+      ),
+      (
+        ${kushnir.id},
+        'ПТ',
+        '18:00',
+        'Функционал',
+        '1',
+        2
+      ),
+      (
+        ${kushnir.id},
+        'ВС',
+        '11:00',
+        'Функционал',
+        '1',
+        3
+      )
+  `;
+
+
+  // ----------------------------------------------------------
+  // 9. ВАСИЛЬЧЕВСКАЯ ЕВГЕНИЯ
+  // ----------------------------------------------------------
+
+  const [vasilchevskaya] =
+    await sql`
+      INSERT INTO trainers
+        (name, phone, sort_order)
+      VALUES
+        (
+          'Васильчевская Евгения',
+          '+7 (914) 936-82-32',
+          9
+        )
+      RETURNING id
+    `;
+
+
+  await sql`
+    INSERT INTO directions
+      (
+        trainer_id,
+        name,
+        description,
+        sort_order
+      )
+    VALUES
+      (
+        ${vasilchevskaya.id},
+        'Зумба',
+        'Танцевальная кардиотренировка под энергичную музыку.',
+        1
+      )
+  `;
+
+
+  await sql`
+    INSERT INTO schedule
+      (
+        trainer_id,
+        day,
+        time,
+        direction,
+        hall,
+        sort_order
+      )
+    VALUES
+      (
+        ${vasilchevskaya.id},
+        'ПТ',
+        '18:30',
+        'Зумба',
+        '3',
+        1
+      )
+  `;
 }
 
 
@@ -531,72 +816,103 @@ async function seedDatabase() {
 async function getTrainers() {
 
   return sql`
-    SELECT *
+    SELECT
+      id,
+      name,
+      phone,
+      sort_order
     FROM trainers
-    ORDER BY sort_order, id
+    ORDER BY
+      sort_order,
+      name,
+      id
   `;
 }
 
 
-async function getTrainer(id) {
+async function getTrainer(
+  trainerId
+) {
 
-  const trainers = await sql`
-    SELECT *
-    FROM trainers
-    WHERE id = ${id}
-    LIMIT 1
-  `;
+  const rows =
+    await sql`
+      SELECT
+        id,
+        name,
+        phone,
+        sort_order
+      FROM trainers
+      WHERE id = ${trainerId}
+      LIMIT 1
+    `;
 
-  if (!trainers.length) {
+
+  if (!rows.length) {
     return null;
   }
 
 
-  const directions = await sql`
-    SELECT *
-    FROM directions
-    WHERE trainer_id = ${id}
-    ORDER BY sort_order, id
-  `;
+  const trainer = rows[0];
 
 
-  const schedule = await sql`
-    SELECT *
-    FROM schedule
-    WHERE trainer_id = ${id}
-    ORDER BY sort_order, id
-  `;
+  trainer.directions =
+    await sql`
+      SELECT
+        id,
+        name,
+        description,
+        sort_order
+      FROM directions
+      WHERE trainer_id = ${trainerId}
+      ORDER BY
+        sort_order,
+        id
+    `;
 
 
-  return {
-    ...trainers[0],
-    directions,
-    schedule
-  };
+  trainer.schedule =
+    await sql`
+      SELECT
+        id,
+        day,
+        time,
+        direction,
+        hall,
+        sort_order
+      FROM schedule
+      WHERE trainer_id = ${trainerId}
+      ORDER BY
+        sort_order,
+        id
+    `;
+
+
+  return trainer;
 }
 
 
-async function getTrainersByIds(ids) {
+async function getTrainersByIds(
+  ids
+) {
 
-  const trainers = [];
+  const result = [];
 
-  for (const rawId of ids || []) {
 
-    const id = Number(rawId);
-
-    if (!Number.isInteger(id)) {
-      continue;
-    }
+  for (const id of ids) {
 
     const trainer =
-      await getTrainer(id);
+      await getTrainer(
+        Number(id)
+      );
+
 
     if (trainer) {
-      trainers.push(trainer);
+      result.push(trainer);
     }
   }
 
-  return trainers;
+
+  return result;
 }
 
 
@@ -612,29 +928,11 @@ async function getWeekSchedule() {
       s.hall,
       s.sort_order,
       t.name AS trainer_name
-
     FROM schedule s
-
     JOIN trainers t
       ON t.id = s.trainer_id
-
     ORDER BY
-
-      CASE UPPER(s.day)
-
-        WHEN 'ПН' THEN 1
-        WHEN 'ВТ' THEN 2
-        WHEN 'СР' THEN 3
-        WHEN 'ЧТ' THEN 4
-        WHEN 'ПТ' THEN 5
-        WHEN 'СБ' THEN 6
-        WHEN 'ВС' THEN 7
-
-        ELSE 99
-
-      END,
-
-      s.time,
+      t.sort_order,
       s.sort_order,
       s.id
   `;
@@ -642,74 +940,66 @@ async function getWeekSchedule() {
 
 
 // ============================================================
-// СОСТОЯНИЯ БОТА
+// СОСТОЯНИЯ
 // ============================================================
 
 async function setState(
   chat,
   action,
   trainerId = null,
-  scheduleId = null,
+  itemId = null,
   data = {}
 ) {
 
   await sql`
-    INSERT INTO bot_state (
-      chat_id,
-      action,
-      trainer_id,
-      schedule_id,
-      data
-    )
-
-    VALUES (
-      ${chat},
-      ${action},
-      ${trainerId},
-      ${scheduleId},
-      ${JSON.stringify(data)}::jsonb
-    )
+    INSERT INTO bot_state
+      (
+        chat_id,
+        action,
+        trainer_id,
+        item_id,
+        data,
+        updated_at
+      )
+    VALUES
+      (
+        ${String(chat)},
+        ${action},
+        ${trainerId},
+        ${itemId},
+        ${JSON.stringify(data)}::jsonb,
+        NOW()
+      )
 
     ON CONFLICT (chat_id)
 
     DO UPDATE SET
-
       action = EXCLUDED.action,
       trainer_id = EXCLUDED.trainer_id,
-      schedule_id = EXCLUDED.schedule_id,
-      data = EXCLUDED.data
+      item_id = EXCLUDED.item_id,
+      data = EXCLUDED.data,
+      updated_at = NOW()
   `;
 }
 
 
 async function getState(chat) {
 
-  const rows = await sql`
-    SELECT *
-    FROM bot_state
-    WHERE chat_id = ${chat}
-    LIMIT 1
-  `;
+  const rows =
+    await sql`
+      SELECT
+        chat_id,
+        action,
+        trainer_id,
+        item_id,
+        data
+      FROM bot_state
+      WHERE chat_id = ${String(chat)}
+      LIMIT 1
+    `;
+
 
   return rows[0] || null;
-}
-
-
-function stateData(state) {
-
-  if (!state?.data) {
-    return {};
-  }
-
-  if (typeof state.data === "object") {
-    return state.data;
-  }
-
-  try {
-    return JSON.parse(state.data);
-  } catch {
-    return {};
-  }
 }
 
 
@@ -717,8 +1007,36 @@ async function clearState(chat) {
 
   await sql`
     DELETE FROM bot_state
-    WHERE chat_id = ${chat}
+    WHERE chat_id = ${String(chat)}
   `;
+}
+
+
+function stateData(state) {
+
+  if (!state) {
+    return {};
+  }
+
+
+  if (
+    state.data &&
+    typeof state.data === "object"
+  ) {
+    return state.data;
+  }
+
+
+  try {
+
+    return JSON.parse(
+      state.data || "{}"
+    );
+
+  } catch {
+
+    return {};
+  }
 }
 
 
@@ -739,13 +1057,6 @@ function mainKeyboard() {
 
     [
       {
-        text: "📅 Общее расписание",
-        callback_data: "week"
-      }
-    ],
-
-    [
-      {
         text: "👤 Тренеры",
         callback_data: "trainers"
       }
@@ -753,7 +1064,7 @@ function mainKeyboard() {
 
     [
       {
-        text: "✏️ Управление данными",
+        text: "⚙️ Админка",
         callback_data: "admin"
       }
     ]
@@ -762,31 +1073,52 @@ function mainKeyboard() {
 }
 
 
-async function trainerKeyboard(prefix) {
+async function trainerKeyboard(
+  callbackPrefix
+) {
 
   const trainers =
     await getTrainers();
 
+
   const keyboard =
-    trainers.map((trainer) => [
+    trainers.map(
+      (trainer) => [
+
+        {
+          text: trainer.name,
+          callback_data:
+            `${callbackPrefix}:${trainer.id}`
+        }
+
+      ]
+    );
+
+
+  if (
+    callbackPrefix ===
+    "admin_trainer"
+  ) {
+
+    keyboard.push([
 
       {
-        text: trainer.name,
-        callback_data:
-          `${prefix}:${trainer.id}`
+        text: "➕ Добавить тренера",
+        callback_data: "add_trainer"
       }
 
     ]);
 
 
-  keyboard.push([
+    keyboard.push([
 
-    {
-      text: "⬅️ Назад",
-      callback_data: "home"
-    }
+      {
+        text: "⬅️ Назад",
+        callback_data: "admin"
+      }
 
-  ]);
+    ]);
+  }
 
 
   return keyboard;
@@ -794,34 +1126,35 @@ async function trainerKeyboard(prefix) {
 
 
 async function trainerSelectionKeyboard(
-  prefix,
-  selectedIds = []
+  callbackPrefix,
+  selected = []
 ) {
-
-  const selected =
-    selectedIds.map(Number);
 
   const trainers =
     await getTrainers();
 
 
-  return trainers.map((trainer) => [
+  const selectedIds =
+    selected.map(Number);
 
-    {
-      text:
-        `${
-          selected.includes(
+
+  return trainers.map(
+    (trainer) => [
+
+      {
+        text:
+          selectedIds.includes(
             Number(trainer.id)
           )
-            ? "✅ "
-            : ""
-        }${trainer.name}`,
+            ? `✅ ${trainer.name}`
+            : trainer.name,
 
-      callback_data:
-        `${prefix}:${trainer.id}`
-    }
+        callback_data:
+          `${callbackPrefix}:${trainer.id}`
+      }
 
-  ]);
+    ]
+  );
 }
 
 
@@ -835,25 +1168,18 @@ async function showAdmin(chat) {
 
 
   await sendMessage(
+
     chat,
 
-    "✏️ УПРАВЛЕНИЕ ДАННЫМИ\n\nВыберите действие:",
+    "⚙️ АДМИНКА «ТИТАН»\n\nЧто редактируем?",
 
     [
 
       [
         {
-          text: "👤 Изменить тренера",
+          text: "👤 Тренеры",
           callback_data:
             "admin_trainers"
-        }
-      ],
-
-      [
-        {
-          text: "➕ Добавить тренера",
-          callback_data:
-            "add_trainer"
         }
       ],
 
@@ -870,17 +1196,15 @@ async function showAdmin(chat) {
 }
 
 
-// ============================================================
-// КАРТОЧКА ТРЕНЕРА В АДМИНКЕ
-// ============================================================
-
 async function showTrainerAdmin(
   chat,
   trainerId
 ) {
 
   const trainer =
-    await getTrainer(trainerId);
+    await getTrainer(
+      trainerId
+    );
 
 
   if (!trainer) {
@@ -898,32 +1222,21 @@ async function showTrainerAdmin(
 
     chat,
 
-    `👤 ${trainer.name}
-📞 ${trainer.phone || "—"}
-
-Что изменить?`,
+    `👤 ${trainer.name}\n\n📞 ${trainer.phone || "—"}\n\nНаправлений: ${trainer.directions.length}\nЗанятий в расписании: ${trainer.schedule.length}`,
 
     [
 
       [
         {
-          text: "📅 Расписание",
+          text: "✏️ Изменить имя",
           callback_data:
-            `admin_schedule:${trainerId}`
-        }
-      ],
-
-      [
-        {
-          text: "✏️ Имя",
-          callback_data:
-            `edit_name:${trainerId}`
+            `edit_name:${trainer.id}`
         },
 
         {
-          text: "📞 Телефон",
+          text: "📞 Изменить телефон",
           callback_data:
-            `edit_phone:${trainerId}`
+            `edit_phone:${trainer.id}`
         }
       ],
 
@@ -931,7 +1244,15 @@ async function showTrainerAdmin(
         {
           text: "🏋️ Направления",
           callback_data:
-            `admin_directions:${trainerId}`
+            `admin_directions:${trainer.id}`
+        }
+      ],
+
+      [
+        {
+          text: "📅 Расписание",
+          callback_data:
+            `admin_schedule:${trainer.id}`
         }
       ],
 
@@ -939,7 +1260,7 @@ async function showTrainerAdmin(
         {
           text: "🗑 Удалить тренера",
           callback_data:
-            `delete_trainer_confirm:${trainerId}`
+            `delete_trainer_confirm:${trainer.id}`
         }
       ],
 
@@ -964,17 +1285,15 @@ async function showTrainerAdmin(
 }
 
 
-// ============================================================
-// РАСПИСАНИЕ ТРЕНЕРА
-// ============================================================
-
 async function showScheduleAdmin(
   chat,
   trainerId
 ) {
 
   const trainer =
-    await getTrainer(trainerId);
+    await getTrainer(
+      trainerId
+    );
 
 
   if (!trainer) {
@@ -989,19 +1308,23 @@ async function showScheduleAdmin(
 
 
   const keyboard =
-    trainer.schedule.map((lesson) => [
+    trainer.schedule.map(
+      (lesson) => [
 
-      {
-        text:
-          `${lesson.day} ${lesson.time} · ` +
-          `${lesson.direction} · ` +
-          `${hallText(lesson.hall)}`,
+        {
+          text:
+            `${lesson.day} · ${lesson.time} · ${lesson.direction} · ${
+              String(lesson.hall).toUpperCase() === "GYM"
+                ? "GYM"
+                : `зал ${lesson.hall}`
+            }`,
 
-        callback_data:
-          `lesson:${lesson.id}`
-      }
+          callback_data:
+            `lesson:${lesson.id}`
+        }
 
-    ]);
+      ]
+    );
 
 
   keyboard.push([
@@ -1009,7 +1332,7 @@ async function showScheduleAdmin(
     {
       text: "➕ Добавить занятие",
       callback_data:
-        `add_lesson:${trainerId}`
+        `add_lesson:${trainer.id}`
     }
 
   ]);
@@ -1018,9 +1341,9 @@ async function showScheduleAdmin(
   keyboard.push([
 
     {
-      text: "⬅️ Назад",
+      text: "⬅️ К тренеру",
       callback_data:
-        `admin_trainer:${trainerId}`
+        `admin_trainer:${trainer.id}`
     }
 
   ]);
@@ -1030,40 +1353,29 @@ async function showScheduleAdmin(
 
     chat,
 
-    `📅 РАСПИСАНИЕ
-${trainer.name}
-
-Выберите занятие:`,
+    `📅 РАСПИСАНИЕ\n\n${trainer.name}`,
 
     keyboard
   );
 }
 
 
-// ============================================================
-// КАРТОЧКА ЗАНЯТИЯ
-// ============================================================
-
 async function showLessonAdmin(
   chat,
   scheduleId
 ) {
 
-  const rows = await sql`
-
-    SELECT
-      s.*,
-      t.name AS trainer_name
-
-    FROM schedule s
-
-    JOIN trainers t
-      ON t.id = s.trainer_id
-
-    WHERE s.id = ${scheduleId}
-
-    LIMIT 1
-  `;
+  const rows =
+    await sql`
+      SELECT
+        s.*,
+        t.name AS trainer_name
+      FROM schedule s
+      JOIN trainers t
+        ON t.id = s.trainer_id
+      WHERE s.id = ${scheduleId}
+      LIMIT 1
+    `;
 
 
   if (!rows.length) {
@@ -1084,26 +1396,26 @@ async function showLessonAdmin(
 
     chat,
 
-    `${lesson.trainer_name}
+    `📅 ЗАНЯТИЕ
 
-📅 ${lesson.day}
-🕐 ${lesson.time}
-🏋️ ${lesson.direction}
-🚪 ${hallText(lesson.hall)}`,
+${lesson.trainer_name}
+
+День: ${lesson.day}
+Время: ${lesson.time}
+Направление: ${lesson.direction}
+Зал: ${lesson.hall}`,
 
     [
 
       [
         {
-          text: "📅 Изменить день",
+          text: "📆 День",
           callback_data:
             `lesson_day:${lesson.id}`
-        }
-      ],
+        },
 
-      [
         {
-          text: "🕐 Изменить время",
+          text: "🕐 Время",
           callback_data:
             `lesson_time:${lesson.id}`
         }
@@ -1111,15 +1423,13 @@ async function showLessonAdmin(
 
       [
         {
-          text: "🏋️ Изменить направление",
+          text: "🏋️ Направление",
           callback_data:
             `lesson_direction:${lesson.id}`
-        }
-      ],
+        },
 
-      [
         {
-          text: "🚪 Изменить зал",
+          text: "🚪 Зал",
           callback_data:
             `lesson_hall:${lesson.id}`
         }
@@ -1146,17 +1456,15 @@ async function showLessonAdmin(
 }
 
 
-// ============================================================
-// НАПРАВЛЕНИЯ ТРЕНЕРА
-// ============================================================
-
 async function showDirectionsAdmin(
   chat,
   trainerId
 ) {
 
   const trainer =
-    await getTrainer(trainerId);
+    await getTrainer(
+      trainerId
+    );
 
 
   if (!trainer) {
@@ -1175,9 +1483,7 @@ async function showDirectionsAdmin(
       (direction) => [
 
         {
-          text:
-            `🏋️ ${direction.name}`,
-
+          text: direction.name,
           callback_data:
             `direction:${direction.id}`
         }
@@ -1191,7 +1497,7 @@ async function showDirectionsAdmin(
     {
       text: "➕ Добавить направление",
       callback_data:
-        `add_direction:${trainerId}`
+        `add_direction:${trainer.id}`
     }
 
   ]);
@@ -1200,9 +1506,9 @@ async function showDirectionsAdmin(
   keyboard.push([
 
     {
-      text: "⬅️ Назад",
+      text: "⬅️ К тренеру",
       callback_data:
-        `admin_trainer:${trainerId}`
+        `admin_trainer:${trainer.id}`
     }
 
   ]);
@@ -1212,40 +1518,29 @@ async function showDirectionsAdmin(
 
     chat,
 
-    `🏋️ НАПРАВЛЕНИЯ
-${trainer.name}
-
-Выберите направление:`,
+    `🏋️ НАПРАВЛЕНИЯ\n\n${trainer.name}`,
 
     keyboard
   );
 }
 
 
-// ============================================================
-// КАРТОЧКА НАПРАВЛЕНИЯ
-// ============================================================
-
 async function showDirectionAdmin(
   chat,
   directionId
 ) {
 
-  const rows = await sql`
-
-    SELECT
-      d.*,
-      t.name AS trainer_name
-
-    FROM directions d
-
-    JOIN trainers t
-      ON t.id = d.trainer_id
-
-    WHERE d.id = ${directionId}
-
-    LIMIT 1
-  `;
+  const rows =
+    await sql`
+      SELECT
+        d.*,
+        t.name AS trainer_name
+      FROM directions d
+      JOIN trainers t
+        ON t.id = d.trainer_id
+      WHERE d.id = ${directionId}
+      LIMIT 1
+    `;
 
 
   if (!rows.length) {
@@ -1267,17 +1562,17 @@ async function showDirectionAdmin(
 
     chat,
 
-    `${direction.trainer_name}
+    `🏋️ ${direction.name}
 
-🏋️ ${direction.name}
+Тренер: ${direction.trainer_name}
 
-${direction.description || "Описание не указано"}`,
+${direction.description || "Описание не указано."}`,
 
     [
 
       [
         {
-          text: "✏️ Изменить название",
+          text: "✏️ Название",
           callback_data:
             `direction_name:${direction.id}`
         }
@@ -1285,7 +1580,7 @@ ${direction.description || "Описание не указано"}`,
 
       [
         {
-          text: "📝 Изменить описание",
+          text: "📝 Описание",
           callback_data:
             `direction_desc:${direction.id}`
         }
@@ -1313,12 +1608,51 @@ ${direction.description || "Описание не указано"}`,
 
 
 // ============================================================
-// ОБРАБОТКА ТЕКСТОВОГО ВВОДА
+// ЗАЛ
+// ============================================================
+
+function normalizeHall(value) {
+
+  const text =
+    String(value || "")
+      .trim()
+      .toUpperCase();
+
+
+  if (
+    text === "GYM" ||
+    text.includes("ТРЕНАЖ")
+  ) {
+
+    return "GYM";
+  }
+
+
+  const number =
+    text.match(/\d+/)?.[0];
+
+
+  if (
+    ["1", "2", "3", "5"].includes(
+      number
+    )
+  ) {
+
+    return number;
+  }
+
+
+  return String(value || "").trim();
+}
+
+
+// ============================================================
+// ОБРАБОТКА ТЕКСТА ПОСЛЕ КНОПОК АДМИНКИ
 // ============================================================
 
 async function processStateMessage(
   chat,
-  rawText
+  text
 ) {
 
   const state =
@@ -1330,76 +1664,94 @@ async function processStateMessage(
   }
 
 
-  const text =
-    String(rawText || "").trim();
+  const value =
+    String(text || "").trim();
 
 
-  if (!text) {
+  if (!value) {
+
+    await sendMessage(
+      chat,
+      "Введите значение текстом."
+    );
+
     return true;
   }
 
 
-  const data =
-    stateData(state);
-
-
   // ----------------------------------------------------------
-  // ИЗМЕНЕНИЕ ИМЕНИ
+  // ИМЯ
   // ----------------------------------------------------------
 
-  if (state.action === "edit_name") {
+  if (
+    state.action ===
+    "edit_name"
+  ) {
 
     await sql`
       UPDATE trainers
-      SET name = ${text}
+      SET name = ${value}
       WHERE id = ${state.trainer_id}
     `;
+
 
     const trainerId =
       state.trainer_id;
 
+
     await clearState(chat);
+
 
     await sendMessage(
       chat,
       "✅ Имя изменено."
     );
 
+
     await showTrainerAdmin(
       chat,
       trainerId
     );
+
 
     return true;
   }
 
 
   // ----------------------------------------------------------
-  // ИЗМЕНЕНИЕ ТЕЛЕФОНА
+  // ТЕЛЕФОН
   // ----------------------------------------------------------
 
-  if (state.action === "edit_phone") {
+  if (
+    state.action ===
+    "edit_phone"
+  ) {
 
     await sql`
       UPDATE trainers
-      SET phone = ${text}
+      SET phone = ${value}
       WHERE id = ${state.trainer_id}
     `;
+
 
     const trainerId =
       state.trainer_id;
 
+
     await clearState(chat);
+
 
     await sendMessage(
       chat,
       "✅ Телефон изменён."
     );
 
+
     await showTrainerAdmin(
       chat,
       trainerId
     );
+
 
     return true;
   }
@@ -1415,20 +1767,26 @@ async function processStateMessage(
   ) {
 
     await setState(
+
       chat,
+
       "add_trainer_phone",
+
       null,
+
       null,
+
       {
-        name: text
+        name: value
       }
     );
 
 
     await sendMessage(
       chat,
-      "Введите телефон тренера:"
+      "Теперь введите номер телефона тренера:"
     );
+
 
     return true;
   }
@@ -1443,41 +1801,43 @@ async function processStateMessage(
     "add_trainer_phone"
   ) {
 
-    const maxRows = await sql`
-      SELECT
-        COALESCE(
-          MAX(sort_order),
-          -1
-        ) AS max
+    const data =
+      stateData(state);
 
-      FROM trainers
-    `;
+
+    const maxRows =
+      await sql`
+        SELECT
+          COALESCE(
+            MAX(sort_order),
+            0
+          )::int AS max
+        FROM trainers
+      `;
 
 
     const sortOrder =
-      Number(maxRows[0].max) + 1;
+      Number(
+        maxRows[0]?.max || 0
+      ) + 1;
 
 
-    const inserted = await sql`
-
-      INSERT INTO trainers (
-        name,
-        phone,
-        sort_order
-      )
-
-      VALUES (
-        ${data.name || "Без имени"},
-        ${text},
-        ${sortOrder}
-      )
-
-      RETURNING id
-    `;
-
-
-    const trainerId =
-      inserted[0].id;
+    const inserted =
+      await sql`
+        INSERT INTO trainers
+          (
+            name,
+            phone,
+            sort_order
+          )
+        VALUES
+          (
+            ${data.name || "Новый тренер"},
+            ${value},
+            ${sortOrder}
+          )
+        RETURNING id
+      `;
 
 
     await clearState(chat);
@@ -1485,13 +1845,13 @@ async function processStateMessage(
 
     await sendMessage(
       chat,
-      "✅ Новый тренер добавлен."
+      "✅ Тренер добавлен."
     );
 
 
     await showTrainerAdmin(
       chat,
-      trainerId
+      inserted[0].id
     );
 
 
@@ -1500,7 +1860,7 @@ async function processStateMessage(
 
 
   // ----------------------------------------------------------
-  // ИЗМЕНЕНИЕ ДНЯ
+  // РЕДАКТИРОВАНИЕ ЗАНЯТИЯ
   // ----------------------------------------------------------
 
   if (
@@ -1509,25 +1869,28 @@ async function processStateMessage(
   ) {
 
     const day =
-      text.toUpperCase();
+      value.toUpperCase();
 
 
-    const validDays = [
-      "ПН",
-      "ВТ",
-      "СР",
-      "ЧТ",
-      "ПТ",
-      "СБ",
-      "ВС"
-    ];
+    const validDays =
+      [
+        "ПН",
+        "ВТ",
+        "СР",
+        "ЧТ",
+        "ПТ",
+        "СБ",
+        "ВС"
+      ];
 
 
-    if (!validDays.includes(day)) {
+    if (
+      !validDays.includes(day)
+    ) {
 
       await sendMessage(
         chat,
-        "Введите ПН, ВТ, СР, ЧТ, ПТ, СБ или ВС."
+        "Введите: ПН, ВТ, СР, ЧТ, ПТ, СБ или ВС."
       );
 
       return true;
@@ -1537,12 +1900,12 @@ async function processStateMessage(
     await sql`
       UPDATE schedule
       SET day = ${day}
-      WHERE id = ${state.schedule_id}
+      WHERE id = ${state.item_id}
     `;
 
 
-    const scheduleId =
-      state.schedule_id;
+    const itemId =
+      state.item_id;
 
 
     await clearState(chat);
@@ -1556,17 +1919,13 @@ async function processStateMessage(
 
     await showLessonAdmin(
       chat,
-      scheduleId
+      itemId
     );
 
 
     return true;
   }
 
-
-  // ----------------------------------------------------------
-  // ИЗМЕНЕНИЕ ВРЕМЕНИ
-  // ----------------------------------------------------------
 
   if (
     state.action ===
@@ -1575,13 +1934,13 @@ async function processStateMessage(
 
     await sql`
       UPDATE schedule
-      SET time = ${text}
-      WHERE id = ${state.schedule_id}
+      SET time = ${value}
+      WHERE id = ${state.item_id}
     `;
 
 
-    const scheduleId =
-      state.schedule_id;
+    const itemId =
+      state.item_id;
 
 
     await clearState(chat);
@@ -1595,17 +1954,13 @@ async function processStateMessage(
 
     await showLessonAdmin(
       chat,
-      scheduleId
+      itemId
     );
 
 
     return true;
   }
 
-
-  // ----------------------------------------------------------
-  // ИЗМЕНЕНИЕ НАПРАВЛЕНИЯ ЗАНЯТИЯ
-  // ----------------------------------------------------------
 
   if (
     state.action ===
@@ -1614,13 +1969,13 @@ async function processStateMessage(
 
     await sql`
       UPDATE schedule
-      SET direction = ${text}
-      WHERE id = ${state.schedule_id}
+      SET direction = ${value}
+      WHERE id = ${state.item_id}
     `;
 
 
-    const scheduleId =
-      state.schedule_id;
+    const itemId =
+      state.item_id;
 
 
     await clearState(chat);
@@ -1634,7 +1989,7 @@ async function processStateMessage(
 
     await showLessonAdmin(
       chat,
-      scheduleId
+      itemId
     );
 
 
@@ -1642,39 +1997,24 @@ async function processStateMessage(
   }
 
 
-  // ----------------------------------------------------------
-  // ИЗМЕНЕНИЕ ЗАЛА
-  // ----------------------------------------------------------
-
   if (
     state.action ===
     "lesson_hall"
   ) {
 
     const hall =
-      normalizeHall(text);
-
-
-    if (!hall) {
-
-      await sendMessage(
-        chat,
-        "Введите 1, 2, 3, 5 или «Тренажерный зал»."
-      );
-
-      return true;
-    }
+      normalizeHall(value);
 
 
     await sql`
       UPDATE schedule
       SET hall = ${hall}
-      WHERE id = ${state.schedule_id}
+      WHERE id = ${state.item_id}
     `;
 
 
-    const scheduleId =
-      state.schedule_id;
+    const itemId =
+      state.item_id;
 
 
     await clearState(chat);
@@ -1688,7 +2028,7 @@ async function processStateMessage(
 
     await showLessonAdmin(
       chat,
-      scheduleId
+      itemId
     );
 
 
@@ -1696,9 +2036,9 @@ async function processStateMessage(
   }
 
 
-  // ==========================================================
+  // ----------------------------------------------------------
   // ДОБАВЛЕНИЕ ЗАНЯТИЯ
-  // ==========================================================
+  // ----------------------------------------------------------
 
   if (
     state.action ===
@@ -1706,25 +2046,24 @@ async function processStateMessage(
   ) {
 
     const day =
-      text.toUpperCase();
+      value.toUpperCase();
 
 
-    const validDays = [
-      "ПН",
-      "ВТ",
-      "СР",
-      "ЧТ",
-      "ПТ",
-      "СБ",
-      "ВС"
-    ];
-
-
-    if (!validDays.includes(day)) {
+    if (
+      ![
+        "ПН",
+        "ВТ",
+        "СР",
+        "ЧТ",
+        "ПТ",
+        "СБ",
+        "ВС"
+      ].includes(day)
+    ) {
 
       await sendMessage(
         chat,
-        "Введите ПН, ВТ, СР, ЧТ, ПТ, СБ или ВС."
+        "Введите: ПН, ВТ, СР, ЧТ, ПТ, СБ или ВС."
       );
 
       return true;
@@ -1732,10 +2071,15 @@ async function processStateMessage(
 
 
     await setState(
+
       chat,
+
       "add_lesson_time",
+
       state.trainer_id,
+
       null,
+
       {
         day
       }
@@ -1744,7 +2088,7 @@ async function processStateMessage(
 
     await sendMessage(
       chat,
-      "Введите время, например 18:00:"
+      "Введите время, например 18:30:"
     );
 
 
@@ -1757,21 +2101,30 @@ async function processStateMessage(
     "add_lesson_time"
   ) {
 
+    const data =
+      stateData(state);
+
+
     await setState(
+
       chat,
+
       "add_lesson_direction",
+
       state.trainer_id,
+
       null,
+
       {
         ...data,
-        time: text
+        time: value
       }
     );
 
 
     await sendMessage(
       chat,
-      "Введите направление:"
+      "Введите направление занятия:"
     );
 
 
@@ -1784,21 +2137,30 @@ async function processStateMessage(
     "add_lesson_direction"
   ) {
 
+    const data =
+      stateData(state);
+
+
     await setState(
+
       chat,
+
       "add_lesson_hall",
+
       state.trainer_id,
+
       null,
+
       {
         ...data,
-        direction: text
+        direction: value
       }
     );
 
 
     await sendMessage(
       chat,
-      "Введите 1, 2, 3, 5 или «Тренажерный зал»."
+      "Введите зал: 1, 2, 3, 5 или «Тренажерный зал»:"
     );
 
 
@@ -1811,59 +2173,47 @@ async function processStateMessage(
     "add_lesson_hall"
   ) {
 
-    const hall =
-      normalizeHall(text);
+    const data =
+      stateData(state);
 
 
-    if (!hall) {
-
-      await sendMessage(
-        chat,
-        "Введите 1, 2, 3, 5 или «Тренажерный зал»."
-      );
-
-      return true;
-    }
-
-
-    const maxRows = await sql`
-
-      SELECT
-        COALESCE(
-          MAX(sort_order),
-          -1
-        ) AS max
-
-      FROM schedule
-
-      WHERE trainer_id =
-        ${state.trainer_id}
-    `;
+    const maxRows =
+      await sql`
+        SELECT
+          COALESCE(
+            MAX(sort_order),
+            0
+          )::int AS max
+        FROM schedule
+        WHERE trainer_id = ${state.trainer_id}
+      `;
 
 
     const sortOrder =
-      Number(maxRows[0].max) + 1;
+      Number(
+        maxRows[0]?.max || 0
+      ) + 1;
 
 
     await sql`
-
-      INSERT INTO schedule (
-        trainer_id,
-        day,
-        time,
-        direction,
-        hall,
-        sort_order
-      )
-
-      VALUES (
-        ${state.trainer_id},
-        ${data.day},
-        ${data.time},
-        ${data.direction},
-        ${hall},
-        ${sortOrder}
-      )
+      INSERT INTO schedule
+        (
+          trainer_id,
+          day,
+          time,
+          direction,
+          hall,
+          sort_order
+        )
+      VALUES
+        (
+          ${state.trainer_id},
+          ${data.day},
+          ${data.time},
+          ${data.direction},
+          ${normalizeHall(value)},
+          ${sortOrder}
+        )
     `;
 
 
@@ -1890,9 +2240,9 @@ async function processStateMessage(
   }
 
 
-  // ==========================================================
+  // ----------------------------------------------------------
   // РЕДАКТИРОВАНИЕ НАПРАВЛЕНИЯ
-  // ==========================================================
+  // ----------------------------------------------------------
 
   if (
     state.action ===
@@ -1901,13 +2251,13 @@ async function processStateMessage(
 
     await sql`
       UPDATE directions
-      SET name = ${text}
-      WHERE id = ${state.schedule_id}
+      SET name = ${value}
+      WHERE id = ${state.item_id}
     `;
 
 
-    const directionId =
-      state.schedule_id;
+    const itemId =
+      state.item_id;
 
 
     await clearState(chat);
@@ -1921,7 +2271,7 @@ async function processStateMessage(
 
     await showDirectionAdmin(
       chat,
-      directionId
+      itemId
     );
 
 
@@ -1936,13 +2286,13 @@ async function processStateMessage(
 
     await sql`
       UPDATE directions
-      SET description = ${text}
-      WHERE id = ${state.schedule_id}
+      SET description = ${value}
+      WHERE id = ${state.item_id}
     `;
 
 
-    const directionId =
-      state.schedule_id;
+    const itemId =
+      state.item_id;
 
 
     await clearState(chat);
@@ -1956,7 +2306,7 @@ async function processStateMessage(
 
     await showDirectionAdmin(
       chat,
-      directionId
+      itemId
     );
 
 
@@ -1964,9 +2314,9 @@ async function processStateMessage(
   }
 
 
-  // ==========================================================
+  // ----------------------------------------------------------
   // ДОБАВЛЕНИЕ НАПРАВЛЕНИЯ
-  // ==========================================================
+  // ----------------------------------------------------------
 
   if (
     state.action ===
@@ -1974,19 +2324,24 @@ async function processStateMessage(
   ) {
 
     await setState(
+
       chat,
+
       "add_direction_desc",
+
       state.trainer_id,
+
       null,
+
       {
-        name: text
+        name: value
       }
     );
 
 
     await sendMessage(
       chat,
-      "Введите короткое описание направления:"
+      "Введите описание направления:"
     );
 
 
@@ -1999,40 +2354,43 @@ async function processStateMessage(
     "add_direction_desc"
   ) {
 
-    const maxRows = await sql`
+    const data =
+      stateData(state);
 
-      SELECT
-        COALESCE(
-          MAX(sort_order),
-          -1
-        ) AS max
 
-      FROM directions
-
-      WHERE trainer_id =
-        ${state.trainer_id}
-    `;
+    const maxRows =
+      await sql`
+        SELECT
+          COALESCE(
+            MAX(sort_order),
+            0
+          )::int AS max
+        FROM directions
+        WHERE trainer_id = ${state.trainer_id}
+      `;
 
 
     const sortOrder =
-      Number(maxRows[0].max) + 1;
+      Number(
+        maxRows[0]?.max || 0
+      ) + 1;
 
 
     await sql`
-
-      INSERT INTO directions (
-        trainer_id,
-        name,
-        description,
-        sort_order
-      )
-
-      VALUES (
-        ${state.trainer_id},
-        ${data.name},
-        ${text},
-        ${sortOrder}
-      )
+      INSERT INTO directions
+        (
+          trainer_id,
+          name,
+          description,
+          sort_order
+        )
+      VALUES
+        (
+          ${state.trainer_id},
+          ${data.name},
+          ${value},
+          ${sortOrder}
+        )
     `;
 
 
@@ -2065,27 +2423,22 @@ async function processStateMessage(
 
 // ============================================================
 // КОНЕЦ БЛОКА 1
-// БЛОК 2 ВСТАВЛЯЕТСЯ СРАЗУ НИЖЕ
+//
+// СРАЗУ ПОСЛЕ ЭТОГО КОММЕНТАРИЯ БУДЕТ БЛОК 2.
+// НИЧЕГО НЕ КОММИТИМ, ПОКА НЕ ВСТАВИМ ВСЕ 3 БЛОКА.
 // ============================================================
 // ============================================================
 // БЛОК 2
-// ТИТАН — ГЕНЕРАТОР ИНФОГРАФИКИ A4
-//
-// 1 ТРЕНЕР
-// 2 ТРЕНЕРА — ОСНОВНОЙ ФОРМАТ
-// 3 ТРЕНЕРА
-// ОБЩЕЕ РАСПИСАНИЕ
-//
-// QR ВСТРОЕН В SVG
+// ТИТАН — ГЕНЕРАТОР A4
+// 1 / 2 / 3 ТРЕНЕРА + ОБЩЕЕ РАСПИСАНИЕ
+// ВСТРОЕННЫЙ QR
 // ============================================================
 
-
-const TITAN_QR_URL =
-  "https://t.me/Titannt_bot";
+const TITAN_QR_URL = "https://t.me/Titannt_bot";
 
 
 // ============================================================
-// QR — ВСТРАИВАЕМ PNG ПРЯМО В SVG
+// QR
 // ============================================================
 
 async function getTitanQrDataUrl() {
@@ -2096,7 +2449,6 @@ async function getTitanQrDataUrl() {
       errorCorrectionLevel: "M",
       margin: 1,
       width: 420,
-
       color: {
         dark: "#000000",
         light: "#FFFFFF"
@@ -2107,7 +2459,7 @@ async function getTitanQrDataUrl() {
 
 
 // ============================================================
-// ТЕМА
+// ЦВЕТОВАЯ ТЕМА
 // ============================================================
 
 function trainerPosterTheme(
@@ -2162,7 +2514,6 @@ function trainerPosterTheme(
       bw
         ? "#eeeeee"
         : "#16191e"
-
   };
 }
 
@@ -2236,7 +2587,7 @@ function posterSortSchedule(
 
 
 // ============================================================
-// ТЕКСТ
+// ТЕКСТОВЫЕ ФУНКЦИИ
 // ============================================================
 
 function posterWrap(
@@ -2300,7 +2651,6 @@ function posterCut(
   if (
     text.length <= maxLength
   ) {
-
     return text;
   }
 
@@ -2318,7 +2668,7 @@ function posterCut(
 
 
 // ============================================================
-// ШАПКА
+// ШАПКА A4
 // ============================================================
 
 function trainerPosterHeader(
@@ -2448,7 +2798,7 @@ function trainerPosterFooter(C) {
 
 
 // ============================================================
-// QR
+// QR НА КАРТОЧКЕ
 // ============================================================
 
 function renderTrainerQr(
@@ -2468,7 +2818,7 @@ function renderTrainerQr(
 
         <text
           x="${x - 18}"
-          y="${y + size / 2 - 8}"
+          y="${y + size / 2 - 9}"
           text-anchor="end"
           fill="${C.text}"
           font-family="Arial, sans-serif"
@@ -2523,29 +2873,33 @@ function trainerPosterLegend(
   y,
   C,
   mode = "double",
-  maxWidth = 820
+  maxWidth = 800
 ) {
 
   const fontSize =
     mode === "single"
-      ? 19
+      ? 20
       : mode === "double"
-        ? 17
-        : 13;
+        ? 18
+        : 14;
 
 
   const lineGap =
     mode === "single"
-      ? 28
+      ? 29
       : mode === "double"
-        ? 25
-        : 20;
+        ? 27
+        : 21;
 
 
   const lines = [
+
     "1 — КРОССФИТ / БОКС · 2 — TRX / АНТИГРАВИТИ",
+
     "3 — СИЛОВОЙ ТРЕНИНГ · 5 — ЙОГА / АЭРОЙОГА",
+
     "GYM — ТРЕНАЖЕРНЫЙ ЗАЛ"
+
   ];
 
 
@@ -2553,9 +2907,9 @@ function trainerPosterLegend(
 
   <line
     x1="${x}"
-    y1="${y - 18}"
+    y1="${y - 19}"
     x2="${x + maxWidth}"
-    y2="${y - 18}"
+    y2="${y - 19}"
     stroke="${C.line}"
     stroke-width="2"
   />
@@ -2613,16 +2967,16 @@ function renderTrainerDirections(
 
       <text
         x="${x}"
-        y="${y + 28}"
+        y="${y + 30}"
         fill="${C.muted}"
         font-family="Arial, sans-serif"
-        font-size="18"
+        font-size="19"
         font-weight="700"
       >Направления пока не указаны</text>
 
       `,
 
-      height: 48
+      height: 50
     };
   }
 
@@ -2634,7 +2988,6 @@ function renderTrainerDirections(
   if (mode === "single") {
 
     let svg = "";
-
     let currentY = y;
 
 
@@ -2657,15 +3010,15 @@ function renderTrainerDirections(
 
 
       const cardHeight =
-        104 +
+        108 +
         Math.max(
           0,
           nameLines.length - 1
-        ) * 24 +
+        ) * 26 +
         Math.max(
           0,
           descLines.length - 1
-        ) * 20;
+        ) * 22;
 
 
       svg += `
@@ -2700,10 +3053,10 @@ function renderTrainerDirections(
 
           <text
             x="${x + 24}"
-            y="${currentY + 34 + lineIndex * 25}"
+            y="${currentY + 36 + lineIndex * 27}"
             fill="${C.accent}"
             font-family="Arial, sans-serif"
-            font-size="25"
+            font-size="27"
             font-weight="900"
           >${esc(line)}</text>
 
@@ -2714,11 +3067,11 @@ function renderTrainerDirections(
 
       const descStart =
         currentY +
-        70 +
+        73 +
         Math.max(
           0,
           nameLines.length - 1
-        ) * 24;
+        ) * 26;
 
 
       descLines.forEach(
@@ -2728,10 +3081,10 @@ function renderTrainerDirections(
 
           <text
             x="${x + 24}"
-            y="${descStart + lineIndex * 21}"
+            y="${descStart + lineIndex * 22}"
             fill="${C.text}"
             font-family="Arial, sans-serif"
-            font-size="17"
+            font-size="19"
             font-weight="700"
           >${esc(line)}</text>
 
@@ -2747,8 +3100,7 @@ function renderTrainerDirections(
 
     return {
       svg,
-      height:
-        currentY - y
+      height: currentY - y
     };
   }
 
@@ -2780,26 +3132,26 @@ function renderTrainerDirections(
 
     const titleSize =
       count <= 2
-        ? 27
+        ? 30
         : count <= 4
-          ? 24
-          : 21;
+          ? 26
+          : 22;
 
 
     const descSize =
       count <= 2
-        ? 19
+        ? 21
         : count <= 4
-          ? 17
-          : 15;
+          ? 18
+          : 16;
 
 
     const cardHeight =
       count <= 2
-        ? 88
+        ? 100
         : count <= 4
-          ? 82
-          : 76;
+          ? 90
+          : 80;
 
 
     let svg = "";
@@ -2823,13 +3175,19 @@ function renderTrainerDirections(
         const cardX =
           x +
           column *
-            (columnWidth + gap);
+            (
+              columnWidth +
+              gap
+            );
 
 
         const cardY =
           y +
           row *
-            (cardHeight + 10);
+            (
+              cardHeight +
+              10
+            );
 
 
         const title =
@@ -2838,8 +3196,8 @@ function renderTrainerDirections(
               direction.name || ""
             ).toUpperCase(),
             columns === 1
-              ? 52
-              : 26
+              ? 54
+              : 27
           );
 
 
@@ -2847,8 +3205,8 @@ function renderTrainerDirections(
           posterCut(
             direction.description || "",
             columns === 1
-              ? 92
-              : 46
+              ? 100
+              : 48
           );
 
 
@@ -2875,8 +3233,8 @@ function renderTrainerDirections(
         />
 
         <text
-          x="${cardX + 19}"
-          y="${cardY + 32}"
+          x="${cardX + 20}"
+          y="${cardY + 38}"
           fill="${C.accent}"
           font-family="Arial, sans-serif"
           font-size="${titleSize}"
@@ -2884,8 +3242,8 @@ function renderTrainerDirections(
         >${esc(title)}</text>
 
         <text
-          x="${cardX + 19}"
-          y="${cardY + 61}"
+          x="${cardX + 20}"
+          y="${cardY + 72}"
           fill="${C.text}"
           font-family="Arial, sans-serif"
           font-size="${descSize}"
@@ -2920,11 +3278,9 @@ function renderTrainerDirections(
   // ==========================================================
 
   const cardHeight = 64;
-
   const gap = 8;
 
   let svg = "";
-
   let currentY = y;
 
 
@@ -2998,8 +3354,7 @@ function renderTrainerDirections(
 
   return {
     svg,
-    height:
-      currentY - y
+    height: currentY - y
   };
 }
 
@@ -3033,7 +3388,7 @@ function renderTrainerSchedule(
       y="${y + 30}"
       fill="${C.muted}"
       font-family="Arial, sans-serif"
-      font-size="18"
+      font-size="19"
       font-weight="700"
     >Расписание пока не добавлено</text>
 
@@ -3042,28 +3397,24 @@ function renderTrainerSchedule(
 
 
   // ==========================================================
-  // ДВА ТРЕНЕРА
-  // ПОКАЗЫВАЕМ ВСЕ ЗАНЯТИЯ
+  // ДВА ТРЕНЕРА — ОСНОВНОЙ РЕЖИМ
   // ==========================================================
 
   if (mode === "double") {
 
-    const headerHeight = 42;
-
-    const gap = 5;
+    const headerHeight = 48;
+    const gap = 7;
 
 
     const availableRowsHeight =
       Math.max(
-        60,
+        70,
         maxHeight -
           headerHeight -
-          7
+          8
       );
 
 
-    // Размер строки рассчитывается по количеству занятий.
-    // Стараемся оставить текст максимально крупным.
     const calculatedRowHeight =
       Math.floor(
         (
@@ -3074,62 +3425,30 @@ function renderTrainerSchedule(
               schedule.length - 1
             )
         ) /
-        schedule.length
-      );
-
-
-    const rowHeight =
-      Math.max(
-        32,
-        Math.min(
-          50,
-          calculatedRowHeight
+        Math.max(
+          1,
+          schedule.length
         )
       );
 
 
-    const compact =
-      rowHeight < 42;
-
-
-    const headerFont =
-      compact
-        ? 14
-        : 16;
-
-
-    const mainFont =
-      compact
-        ? 16
-        : 20;
-
-
-    const directionFont =
-      compact
-        ? 15
-        : 19;
-
-
-    const hallFont =
-      compact
-        ? 14
-        : 18;
-
-
     // --------------------------------------------------------
-    // Если занятий настолько много, что одной колонкой
-    // они физически не помещаются — делим на две.
+    // Если занятий много — две колонки.
+    // Ничего не скрываем.
     // --------------------------------------------------------
 
     if (
-      calculatedRowHeight < 32 &&
-      schedule.length > 8
+      calculatedRowHeight < 38 &&
+      schedule.length > 7
     ) {
 
       const columnGap = 16;
 
       const columnWidth =
-        (width - columnGap) / 2;
+        (
+          width -
+          columnGap
+        ) / 2;
 
 
       const splitAt =
@@ -3139,6 +3458,7 @@ function renderTrainerSchedule(
 
 
       const columns = [
+
         schedule.slice(
           0,
           splitAt
@@ -3147,6 +3467,7 @@ function renderTrainerSchedule(
         schedule.slice(
           splitAt
         )
+
       ];
 
 
@@ -3170,18 +3491,18 @@ function renderTrainerSchedule(
 
           const localAvailable =
             Math.max(
-              60,
+              70,
               maxHeight -
                 headerHeight -
-                7
+                8
             );
 
 
           const localRowHeight =
             Math.max(
-              32,
+              34,
               Math.min(
-                44,
+                50,
                 Math.floor(
                   (
                     localAvailable -
@@ -3207,44 +3528,44 @@ function renderTrainerSchedule(
             y="${y}"
             width="${columnWidth}"
             height="${headerHeight}"
-            rx="9"
+            rx="10"
             fill="${C.accent}"
           />
 
           <text
             x="${columnX + 12}"
-            y="${y + 28}"
+            y="${y + 31}"
             fill="${C.onAccent}"
             font-family="Arial, sans-serif"
-            font-size="13"
+            font-size="14"
             font-weight="900"
           >ДЕНЬ</text>
 
           <text
-            x="${columnX + 70}"
-            y="${y + 28}"
+            x="${columnX + 72}"
+            y="${y + 31}"
             fill="${C.onAccent}"
             font-family="Arial, sans-serif"
-            font-size="13"
+            font-size="14"
             font-weight="900"
           >ВРЕМЯ</text>
 
           <text
-            x="${columnX + 164}"
-            y="${y + 28}"
+            x="${columnX + 165}"
+            y="${y + 31}"
             fill="${C.onAccent}"
             font-family="Arial, sans-serif"
-            font-size="13"
+            font-size="14"
             font-weight="900"
           >НАПРАВЛЕНИЕ</text>
 
           <text
             x="${columnX + columnWidth - 12}"
-            y="${y + 28}"
+            y="${y + 31}"
             text-anchor="end"
             fill="${C.onAccent}"
             font-family="Arial, sans-serif"
-            font-size="13"
+            font-size="14"
             font-weight="900"
           >ЗАЛ</text>
 
@@ -3254,7 +3575,7 @@ function renderTrainerSchedule(
           let currentY =
             y +
             headerHeight +
-            7;
+            8;
 
 
           columnRows.forEach(
@@ -3294,7 +3615,7 @@ function renderTrainerSchedule(
               >${esc(lesson.day)}</text>
 
               <text
-                x="${columnX + 70}"
+                x="${columnX + 72}"
                 y="${
                   currentY +
                   localRowHeight / 2 +
@@ -3307,7 +3628,7 @@ function renderTrainerSchedule(
               >${esc(lesson.time)}</text>
 
               <text
-                x="${columnX + 164}"
+                x="${columnX + 165}"
                 y="${
                   currentY +
                   localRowHeight / 2 +
@@ -3363,8 +3684,46 @@ function renderTrainerSchedule(
 
 
     // --------------------------------------------------------
-    // ОДНА КОЛОНКА — ВСЕ ЗАНЯТИЯ
+    // ОДНА КОЛОНКА
     // --------------------------------------------------------
+
+    const rowHeight =
+      Math.max(
+        38,
+        Math.min(
+          62,
+          calculatedRowHeight
+        )
+      );
+
+
+    const compact =
+      rowHeight < 46;
+
+
+    const headerFont =
+      compact
+        ? 15
+        : 17;
+
+
+    const mainFont =
+      compact
+        ? 18
+        : 22;
+
+
+    const directionFont =
+      compact
+        ? 17
+        : 21;
+
+
+    const hallFont =
+      compact
+        ? 17
+        : 20;
+
 
     let svg = `
 
@@ -3379,7 +3738,7 @@ function renderTrainerSchedule(
 
     <text
       x="${x + 16}"
-      y="${y + 28}"
+      y="${y + 31}"
       fill="${C.onAccent}"
       font-family="Arial, sans-serif"
       font-size="${headerFont}"
@@ -3387,8 +3746,8 @@ function renderTrainerSchedule(
     >ДЕНЬ</text>
 
     <text
-      x="${x + 110}"
-      y="${y + 28}"
+      x="${x + 112}"
+      y="${y + 31}"
       fill="${C.onAccent}"
       font-family="Arial, sans-serif"
       font-size="${headerFont}"
@@ -3396,8 +3755,8 @@ function renderTrainerSchedule(
     >ВРЕМЯ</text>
 
     <text
-      x="${x + 300}"
-      y="${y + 28}"
+      x="${x + 302}"
+      y="${y + 31}"
       fill="${C.onAccent}"
       font-family="Arial, sans-serif"
       font-size="${headerFont}"
@@ -3406,7 +3765,7 @@ function renderTrainerSchedule(
 
     <text
       x="${x + width - 16}"
-      y="${y + 28}"
+      y="${y + 31}"
       text-anchor="end"
       fill="${C.onAccent}"
       font-family="Arial, sans-serif"
@@ -3420,7 +3779,7 @@ function renderTrainerSchedule(
     let currentY =
       y +
       headerHeight +
-      7;
+      8;
 
 
     schedule.forEach(
@@ -3460,7 +3819,7 @@ function renderTrainerSchedule(
         >${esc(lesson.day)}</text>
 
         <text
-          x="${x + 110}"
+          x="${x + 112}"
           y="${
             currentY +
             rowHeight / 2 +
@@ -3473,7 +3832,7 @@ function renderTrainerSchedule(
         >${esc(lesson.time)}</text>
 
         <text
-          x="${x + 300}"
+          x="${x + 302}"
           y="${
             currentY +
             rowHeight / 2 +
@@ -3486,7 +3845,7 @@ function renderTrainerSchedule(
         >${esc(
           posterCut(
             lesson.direction || "",
-            38
+            39
           )
         )}</text>
 
@@ -3527,7 +3886,7 @@ function renderTrainerSchedule(
 
 
   // ==========================================================
-  // ОДИН ТРЕНЕР / ТРИ ТРЕНЕРА
+  // ОДИН / ТРИ ТРЕНЕРА
   // ==========================================================
 
   let headerHeight;
@@ -3543,10 +3902,10 @@ function renderTrainerSchedule(
   if (mode === "single") {
 
     headerHeight = 50;
-    baseRowHeight = 62;
+    baseRowHeight = 64;
     gap = 8;
 
-    headerFont = 16;
+    headerFont = 17;
     mainFont = 23;
     directionFont = 21;
     hallFont = 20;
@@ -3554,7 +3913,7 @@ function renderTrainerSchedule(
   } else {
 
     headerHeight = 34;
-    baseRowHeight = 36;
+    baseRowHeight = 38;
     gap = 5;
 
     headerFont = 12;
@@ -3593,7 +3952,7 @@ function renderTrainerSchedule(
   const minimumRowHeight =
     mode === "single"
       ? 38
-      : 27;
+      : 26;
 
 
   const rowHeight =
@@ -3613,7 +3972,7 @@ function renderTrainerSchedule(
     y="${y}"
     width="${width}"
     height="${headerHeight}"
-    rx="10"
+    rx="9"
     fill="${C.accent}"
   />
 
@@ -3684,16 +4043,6 @@ function renderTrainerSchedule(
       lesson,
       index
     ) => {
-
-      if (
-        currentY +
-          rowHeight >
-        y + maxHeight
-      ) {
-
-        return;
-      }
-
 
       svg += `
 
@@ -3848,7 +4197,7 @@ function makePoster(
   const bottomZoneY =
     y +
     height -
-    175;
+    180;
 
 
   const scheduleHeight =
@@ -3860,7 +4209,7 @@ function makePoster(
     );
 
 
-  const qrSize = 118;
+  const qrSize = 130;
 
   const qrX =
     x +
@@ -3871,7 +4220,7 @@ function makePoster(
   const qrY =
     y +
     height -
-    145;
+    154;
 
 
   return `
@@ -3985,10 +4334,10 @@ function makePoster(
   ${
     trainerPosterLegend(
       innerX,
-      y + height - 118,
+      y + height - 120,
       C,
       "single",
-      innerWidth - 300
+      innerWidth - 320
     )
   }
 
@@ -4054,16 +4403,20 @@ function makeMultiTrainerPoster(
     list.length;
 
 
-  const pageX = 56;
-  const pageTop = 225;
-  const pageBottom = 1650;
+  // ==========================================================
+  // ГЕОМЕТРИЯ ЛИСТА
+  // ==========================================================
 
+  const pageX = 56;
   const cardWidth = 1128;
+
+  const pageTop = 225;
+  const pageBottom = 1660;
 
 
   const gap =
     count === 2
-      ? 28
+      ? 24
       : 18;
 
 
@@ -4116,15 +4469,19 @@ function makeMultiTrainerPoster(
         pageX + 28;
 
 
+      const innerRight =
+        pageX +
+        cardWidth -
+        28;
+
+
       const innerWidth =
         cardWidth - 56;
 
 
-      const numberFont =
-        doubleMode
-          ? 23
-          : 17;
-
+      // ======================================================
+      // ИМЯ
+      // ======================================================
 
       const rawName =
         String(
@@ -4132,30 +4489,83 @@ function makeMultiTrainerPoster(
         ).toUpperCase();
 
 
-      const nameFont =
+      let nameFont;
+
+
+      if (doubleMode) {
+
+        if (
+          rawName.length > 24
+        ) {
+
+          nameFont = 37;
+
+        } else if (
+          rawName.length > 20
+        ) {
+
+          nameFont = 41;
+
+        } else if (
+          rawName.length > 16
+        ) {
+
+          nameFont = 45;
+
+        } else {
+
+          nameFont = 48;
+        }
+
+      } else {
+
+        if (
+          rawName.length > 24
+        ) {
+
+          nameFont = 27;
+
+        } else if (
+          rawName.length > 19
+        ) {
+
+          nameFont = 30;
+
+        } else {
+
+          nameFont = 33;
+        }
+      }
+
+
+      const numberFont =
         doubleMode
-          ? (
-              rawName.length > 21
-                ? 38
-                : rawName.length > 17
-                  ? 42
-                  : 47
-            )
-          : 33;
+          ? 22
+          : 17;
 
 
       const phoneFont =
         doubleMode
-          ? 24
+          ? 23
           : 18;
 
+
+      const sectionFont =
+        doubleMode
+          ? 21
+          : 15;
+
+
+      // ======================================================
+      // ВЕРХ КАРТОЧКИ
+      // ======================================================
 
       const nameY =
         y +
         (
           doubleMode
-            ? 62
-            : 47
+            ? 61
+            : 46
         );
 
 
@@ -4163,7 +4573,7 @@ function makeMultiTrainerPoster(
         y +
         (
           doubleMode
-            ? 92
+            ? 91
             : 69
         );
 
@@ -4172,7 +4582,7 @@ function makeMultiTrainerPoster(
         dividerY +
         (
           doubleMode
-            ? 37
+            ? 39
             : 27
         );
 
@@ -4181,10 +4591,14 @@ function makeMultiTrainerPoster(
         directionTitleY +
         (
           doubleMode
-            ? 15
+            ? 17
             : 12
         );
 
+
+      // ======================================================
+      // НАПРАВЛЕНИЯ
+      // ======================================================
 
       const directionBlock =
         renderTrainerDirections(
@@ -4197,13 +4611,17 @@ function makeMultiTrainerPoster(
         );
 
 
+      // ======================================================
+      // РАСПИСАНИЕ
+      // ======================================================
+
       const scheduleTitleY =
         directionStartY +
         directionBlock.height +
         (
           doubleMode
-            ? 31
-            : 20
+            ? 35
+            : 21
         );
 
 
@@ -4211,21 +4629,23 @@ function makeMultiTrainerPoster(
         scheduleTitleY +
         (
           doubleMode
-            ? 15
-            : 12
+            ? 20
+            : 14
         );
 
 
+      // ======================================================
+      // QR
+      // ======================================================
+
       const qrSize =
         doubleMode
-          ? 108
-          : 72;
+          ? 120
+          : 76;
 
 
       const qrX =
-        pageX +
-        cardWidth -
-        28 -
+        innerRight -
         qrSize;
 
 
@@ -4235,36 +4655,52 @@ function makeMultiTrainerPoster(
         qrSize -
         (
           doubleMode
-            ? 22
+            ? 24
             : 17
         );
 
+
+      // ======================================================
+      // ЛЕГЕНДА
+      // ======================================================
 
       const legendY =
         y +
         cardHeight -
         (
           doubleMode
-            ? 86
-            : 62
+            ? 93
+            : 63
         );
 
 
+      // ======================================================
+      // СВОБОДНАЯ ВЫСОТА ПОД РАСПИСАНИЕ
+      // ======================================================
+
       const bottomReserved =
         doubleMode
-          ? 142
-          : 100;
+          ? 160
+          : 105;
 
 
       const scheduleHeight =
         Math.max(
-          80,
+
+          doubleMode
+            ? 125
+            : 75,
+
           y +
             cardHeight -
             bottomReserved -
             scheduleY
         );
 
+
+      // ======================================================
+      // КАРТОЧКА
+      // ======================================================
 
       svg += `
 
@@ -4288,6 +4724,9 @@ function makeMultiTrainerPoster(
         fill="${C.accent}"
       />
 
+
+      <!-- НОМЕР -->
+
       <text
         x="${innerX}"
         y="${nameY}"
@@ -4295,12 +4734,17 @@ function makeMultiTrainerPoster(
         font-family="Arial, sans-serif"
         font-size="${numberFont}"
         font-weight="900"
-      >${String(
-        index + 1
-      ).padStart(
-        2,
-        "0"
-      )}</text>
+      >${
+        String(
+          index + 1
+        ).padStart(
+          2,
+          "0"
+        )
+      }</text>
+
+
+      <!-- ИМЯ -->
 
       <text
         x="${innerX + 62}"
@@ -4311,8 +4755,11 @@ function makeMultiTrainerPoster(
         font-weight="900"
       >${esc(rawName)}</text>
 
+
+      <!-- ТЕЛЕФОН -->
+
       <text
-        x="${pageX + cardWidth - 28}"
+        x="${innerRight}"
         y="${nameY - 2}"
         text-anchor="end"
         fill="${C.accent}"
@@ -4323,44 +4770,47 @@ function makeMultiTrainerPoster(
         trainer.phone || ""
       )}</text>
 
+
+      <!-- ЛИНИЯ -->
+
       <line
         x1="${innerX}"
         y1="${dividerY}"
-        x2="${pageX + cardWidth - 28}"
+        x2="${innerRight}"
         y2="${dividerY}"
         stroke="${C.line}"
         stroke-width="1.5"
       />
+
+
+      <!-- НАПРАВЛЕНИЯ -->
 
       <text
         x="${innerX}"
         y="${directionTitleY}"
         fill="${C.muted}"
         font-family="Arial, sans-serif"
-        font-size="${
-          doubleMode
-            ? 21
-            : 15
-        }"
+        font-size="${sectionFont}"
         font-weight="900"
         letter-spacing="2"
       >НАПРАВЛЕНИЯ</text>
 
+
       ${directionBlock.svg}
+
+
+      <!-- РАСПИСАНИЕ -->
 
       <text
         x="${innerX}"
         y="${scheduleTitleY}"
         fill="${C.muted}"
         font-family="Arial, sans-serif"
-        font-size="${
-          doubleMode
-            ? 21
-            : 15
-        }"
+        font-size="${sectionFont}"
         font-weight="900"
         letter-spacing="2"
       >РАСПИСАНИЕ</text>
+
 
       ${
         renderTrainerSchedule(
@@ -4374,6 +4824,9 @@ function makeMultiTrainerPoster(
         )
       }
 
+
+      <!-- ЛЕГЕНДА -->
+
       ${
         trainerPosterLegend(
           innerX,
@@ -4381,10 +4834,13 @@ function makeMultiTrainerPoster(
           C,
           mode,
           doubleMode
-            ? innerWidth - 350
-            : innerWidth - 245
+            ? innerWidth - 365
+            : innerWidth - 250
         )
       }
+
+
+      <!-- QR -->
 
       ${
         renderTrainerQr(
@@ -4439,7 +4895,9 @@ function makeWeekPoster(
   const grouped = {};
 
 
-  for (const lesson of schedule) {
+  for (
+    const lesson of schedule
+  ) {
 
     const day =
       String(
@@ -4468,7 +4926,6 @@ function makeWeekPoster(
 
 
   const leftDays = [];
-
   const rightDays = [];
 
   let leftWeight = 0;
@@ -4501,6 +4958,7 @@ function makeWeekPoster(
   const pageX = 56;
   const columnGap = 24;
 
+
   const columnWidth =
     (
       1240 -
@@ -4519,7 +4977,6 @@ function makeWeekPoster(
   ) {
 
     let currentY = top;
-
     let svg = "";
 
 
@@ -4560,7 +5017,9 @@ function makeWeekPoster(
       );
 
 
-    for (const day of dayList) {
+    for (
+      const day of dayList
+    ) {
 
       const lessons =
         grouped[day];
@@ -4602,138 +5061,109 @@ function makeWeekPoster(
       currentY += 49;
 
 
-      for (
-        let index = 0;
-        index < lessons.length;
-        index++
-      ) {
-
-        if (
-          currentY +
-            rowHeight >
-          bottom
-        ) {
+      lessons.forEach(
+        (
+          lesson,
+          index
+        ) => {
 
           svg += `
 
+          <rect
+            x="${x}"
+            y="${currentY}"
+            width="${columnWidth}"
+            height="${rowHeight - 5}"
+            rx="8"
+            fill="${
+              index % 2
+                ? C.card2
+                : C.card
+            }"
+            stroke="${C.line}"
+            stroke-width="1.1"
+          />
+
           <text
-            x="${x + 14}"
-            y="${currentY + 24}"
+            x="${x + 13}"
+            y="${
+              currentY +
+              rowHeight / 2 +
+              6
+            }"
             fill="${C.accent}"
             font-family="Arial, sans-serif"
             font-size="17"
             font-weight="900"
-          >+ ещё ${
-            lessons.length -
-            index
-          } занятий</text>
+          >${esc(
+            lesson.time
+          )}</text>
+
+          <text
+            x="${x + 92}"
+            y="${
+              currentY +
+              rowHeight / 2 +
+              6
+            }"
+            fill="${C.text}"
+            font-family="Arial, sans-serif"
+            font-size="16"
+            font-weight="900"
+          >${esc(
+            posterCut(
+              lesson.direction || "",
+              20
+            )
+          )}</text>
+
+          <text
+            x="${x + 300}"
+            y="${
+              currentY +
+              rowHeight / 2 +
+              6
+            }"
+            fill="${C.muted}"
+            font-family="Arial, sans-serif"
+            font-size="14"
+            font-weight="800"
+          >${esc(
+            posterCut(
+              lesson.trainer_name || "",
+              15
+            )
+          )}</text>
+
+          <text
+            x="${x + columnWidth - 13}"
+            y="${
+              currentY +
+              rowHeight / 2 +
+              6
+            }"
+            text-anchor="end"
+            fill="${C.accent}"
+            font-family="Arial, sans-serif"
+            font-size="15"
+            font-weight="900"
+          >${
+            String(
+              lesson.hall
+            ).toUpperCase() === "GYM"
+              ? "GYM"
+              : `ЗАЛ ${esc(
+                  lesson.hall
+                )}`
+          }</text>
 
           `;
 
-          break;
+
+          currentY +=
+            rowHeight;
         }
-
-
-        const lesson =
-          lessons[index];
-
-
-        svg += `
-
-        <rect
-          x="${x}"
-          y="${currentY}"
-          width="${columnWidth}"
-          height="${rowHeight - 5}"
-          rx="8"
-          fill="${
-            index % 2
-              ? C.card2
-              : C.card
-          }"
-          stroke="${C.line}"
-          stroke-width="1.1"
-        />
-
-        <text
-          x="${x + 13}"
-          y="${
-            currentY +
-            rowHeight / 2 +
-            6
-          }"
-          fill="${C.accent}"
-          font-family="Arial, sans-serif"
-          font-size="17"
-          font-weight="900"
-        >${esc(
-          lesson.time
-        )}</text>
-
-        <text
-          x="${x + 92}"
-          y="${
-            currentY +
-            rowHeight / 2 +
-            6
-          }"
-          fill="${C.text}"
-          font-family="Arial, sans-serif"
-          font-size="16"
-          font-weight="900"
-        >${esc(
-          posterCut(
-            lesson.direction || "",
-            20
-          )
-        )}</text>
-
-        <text
-          x="${x + 300}"
-          y="${
-            currentY +
-            rowHeight / 2 +
-            6
-          }"
-          fill="${C.muted}"
-          font-family="Arial, sans-serif"
-          font-size="14"
-          font-weight="800"
-        >${esc(
-          posterCut(
-            lesson.trainer_name || "",
-            15
-          )
-        )}</text>
-
-        <text
-          x="${x + columnWidth - 13}"
-          y="${
-            currentY +
-            rowHeight / 2 +
-            6
-          }"
-          text-anchor="end"
-          fill="${C.accent}"
-          font-family="Arial, sans-serif"
-          font-size="15"
-          font-weight="900"
-        >${
-          String(
-            lesson.hall
-          ).toUpperCase() === "GYM"
-            ? "GYM"
-            : `ЗАЛ ${esc(
-                lesson.hall
-              )}`
-        }</text>
-
-        `;
-
-
-        currentY +=
-          rowHeight;
-      }
+      );
 
 
       currentY += 10;
@@ -4804,7 +5234,7 @@ function makeWeekPoster(
 
 
 // ============================================================
-// ОТПРАВКА SVG
+// ОТПРАВКА SVG В TELEGRAM
 // ============================================================
 
 async function sendSvgDocument(
@@ -4866,9 +5296,7 @@ async function sendSvgDocument(
 
 
     throw new Error(
-      `sendDocument: ` +
-      `${response.status} ` +
-      errorText
+      `sendDocument: ${response.status} ${errorText}`
     );
   }
 
@@ -4901,7 +5329,6 @@ async function sendPoster(
   }
 
 
-  // QR генерируется один раз и встраивается в SVG.
   const qrDataUrl =
     await getTitanQrDataUrl();
 
@@ -4916,7 +5343,8 @@ async function sendPoster(
 
   const safeName =
     String(
-      trainer.name || "trainer"
+      trainer.name ||
+      "trainer"
     )
       .replace(
         /[^\p{L}\p{N}_-]+/gu,
@@ -4972,9 +5400,10 @@ async function sendMultiTrainerPoster(
   }
 
 
-  // Один QR генерируем один раз.
-  // Затем тот же встроенный QR помещается
-  // в КАЖДУЮ карточку тренера.
+  // Генерируем QR один раз.
+  // Встроенная PNG-картинка используется
+  // на каждой карточке.
+
   const qrDataUrl =
     await getTitanQrDataUrl();
 
@@ -5008,9 +5437,7 @@ async function sendMultiTrainerPoster(
 
     `TITAN_${names}_${themeName}.svg`,
 
-    trainers.length === 1
-      ? "🖼 ТИТАН — инфографика тренера"
-      : "🖼 ТИТАН — инфографика тренеров"
+    "🖼 ТИТАН — инфографика тренеров"
   );
 }
 
@@ -5051,38 +5478,45 @@ async function sendWeekPoster(
 // ============================================================
 // КОНЕЦ БЛОКА 2
 //
-// НИЖЕ СРАЗУ ОСТАЁТСЯ БЛОК 3.
+// СРАЗУ НИЖЕ БУДЕТ БЛОК 3.
+// ПОКА COMMIT НЕ НАЖИМАЙ.
 // ============================================================
 // ============================================================
 // БЛОК 3
-// ТИТАН BOT — ОСНОВНОЙ WEBHOOK
-// КНОПКИ, ГЕНЕРАЦИЯ, АДМИНКА
+// ТИТАН BOT
+// WEBHOOK · КНОПКИ · ГЕНЕРАЦИЯ · АДМИНКА
 // ============================================================
 
-module.exports = async function handler(
-  req,
-  res
-) {
+module.exports = async function handler(req, res) {
 
-  // ==========================================================
-  // ПРОВЕРКА МЕТОДА
-  // ==========================================================
+  // ----------------------------------------------------------
+  // Telegram webhook работает через POST.
+  // GET оставляем для простой проверки endpoint.
+  // ----------------------------------------------------------
+
+  if (req.method === "GET") {
+
+    return res.status(200).json({
+      ok: true,
+      service: "TITAN Telegram Bot",
+      webhook: true
+    });
+  }
+
 
   if (req.method !== "POST") {
 
-    return res
-      .status(200)
-      .json({
-        ok: true,
-        service: "TITAN Bot"
-      });
+    return res.status(405).json({
+      ok: false,
+      error: "Method not allowed"
+    });
   }
 
 
   try {
 
     // ========================================================
-    // ИНИЦИАЛИЗАЦИЯ БАЗЫ
+    // БАЗА
     // ========================================================
 
     await initDatabase();
@@ -5114,11 +5548,9 @@ module.exports = async function handler(
 
       if (!chat) {
 
-        return res
-          .status(200)
-          .json({
-            ok: true
-          });
+        return res.status(200).json({
+          ok: true
+        });
       }
 
 
@@ -5138,42 +5570,41 @@ module.exports = async function handler(
 
           chat,
 
-          `ТИТАН
+          `🏋️ ТИТАН
 
 Спортивный комплекс · Сарапул
 
-Выберите раздел:`,
+Здесь можно посмотреть тренеров, актуальное расписание и создать фирменную инфографику.`,
 
           mainKeyboard()
         );
 
 
-        return res
-          .status(200)
-          .json({
-            ok: true
-          });
+        return res.status(200).json({
+          ok: true
+        });
       }
 
 
       // ------------------------------------------------------
-      // Если бот ждёт текст от администратора
+      // Если админка ожидает текст
       // ------------------------------------------------------
 
-      const processed =
-        await processStateMessage(
-          chat,
-          text
-        );
+      if (text) {
+
+        const processed =
+          await processStateMessage(
+            chat,
+            text
+          );
 
 
-      if (processed) {
+        if (processed) {
 
-        return res
-          .status(200)
-          .json({
+          return res.status(200).json({
             ok: true
           });
+        }
       }
 
 
@@ -5185,17 +5616,17 @@ module.exports = async function handler(
 
         chat,
 
-        "Выберите нужный раздел:",
+        `ТИТАН · САРАПУЛ
+
+Выберите нужный раздел:`,
 
         mainKeyboard()
       );
 
 
-      return res
-        .status(200)
-        .json({
-          ok: true
-        });
+      return res.status(200).json({
+        ok: true
+      });
     }
 
 
@@ -5205,32 +5636,30 @@ module.exports = async function handler(
 
     if (update.callback_query) {
 
-      const query =
+      const callback =
         update.callback_query;
 
 
       const chat =
-        query.message?.chat?.id;
+        callback.message?.chat?.id;
 
 
       const data =
         String(
-          query.data || ""
+          callback.data || ""
         );
 
 
       if (!chat) {
 
-        return res
-          .status(200)
-          .json({
-            ok: true
-          });
+        return res.status(200).json({
+          ok: true
+        });
       }
 
 
       // ------------------------------------------------------
-      // Убираем "часики" на Telegram-кнопке
+      // Убираем "часики" Telegram
       // ------------------------------------------------------
 
       try {
@@ -5239,7 +5668,7 @@ module.exports = async function handler(
           "answerCallbackQuery",
           {
             callback_query_id:
-              query.id
+              callback.id
           }
         );
 
@@ -5265,21 +5694,19 @@ module.exports = async function handler(
 
           chat,
 
-          `ТИТАН
+          `🏋️ ТИТАН
 
 Спортивный комплекс · Сарапул
 
-Выберите раздел:`,
+Выберите нужный раздел:`,
 
           mainKeyboard()
         );
 
 
-        return res
-          .status(200)
-          .json({
-            ok: true
-          });
+        return res.status(200).json({
+          ok: true
+        });
       }
 
 
@@ -5302,7 +5729,8 @@ module.exports = async function handler(
 
             [
               {
-                text: "👤 Тренеры",
+                text:
+                  "👤 Тренеры",
                 callback_data:
                   "trainer_poster_menu"
               }
@@ -5310,7 +5738,8 @@ module.exports = async function handler(
 
             [
               {
-                text: "📅 Общее расписание",
+                text:
+                  "📅 Общее расписание",
                 callback_data:
                   "week"
               }
@@ -5318,7 +5747,8 @@ module.exports = async function handler(
 
             [
               {
-                text: "🏠 В меню",
+                text:
+                  "⬅️ Назад",
                 callback_data:
                   "home"
               }
@@ -5328,11 +5758,9 @@ module.exports = async function handler(
         );
 
 
-        return res
-          .status(200)
-          .json({
-            ok: true
-          });
+        return res.status(200).json({
+          ok: true
+        });
       }
 
 
@@ -5352,13 +5780,16 @@ module.exports = async function handler(
 
           chat,
 
-          "👤 Сколько тренеров разместить на одном листе A4?",
+          `👤 ИНФОГРАФИКА ТРЕНЕРОВ
+
+Сколько тренеров разместить на одном листе A4?`,
 
           [
 
             [
               {
-                text: "1 тренер",
+                text:
+                  "1 тренер",
                 callback_data:
                   "poster_count:1"
               }
@@ -5366,7 +5797,8 @@ module.exports = async function handler(
 
             [
               {
-                text: "2 тренера",
+                text:
+                  "2 тренера",
                 callback_data:
                   "poster_count:2"
               }
@@ -5374,7 +5806,8 @@ module.exports = async function handler(
 
             [
               {
-                text: "3 тренера",
+                text:
+                  "3 тренера",
                 callback_data:
                   "poster_count:3"
               }
@@ -5382,7 +5815,8 @@ module.exports = async function handler(
 
             [
               {
-                text: "⬅️ Назад",
+                text:
+                  "⬅️ Назад",
                 callback_data:
                   "create"
               }
@@ -5392,16 +5826,14 @@ module.exports = async function handler(
         );
 
 
-        return res
-          .status(200)
-          .json({
-            ok: true
-          });
+        return res.status(200).json({
+          ok: true
+        });
       }
 
 
       // ======================================================
-      // ЗАПОМИНАЕМ КОЛИЧЕСТВО
+      // СОХРАНЯЕМ КОЛИЧЕСТВО
       // ======================================================
 
       if (
@@ -5428,11 +5860,9 @@ module.exports = async function handler(
           );
 
 
-          return res
-            .status(200)
-            .json({
-              ok: true
-            });
+          return res.status(200).json({
+            ok: true
+          });
         }
 
 
@@ -5463,7 +5893,8 @@ module.exports = async function handler(
         keyboard.push([
 
           {
-            text: "⬅️ Назад",
+            text:
+              "⬅️ Назад",
             callback_data:
               "trainer_poster_menu"
           }
@@ -5475,28 +5906,24 @@ module.exports = async function handler(
 
           chat,
 
-          `Выберите ${
+          `Выберите ${count} ${
             count === 1
               ? "тренера"
-              : count === 2
-                ? "2 тренеров"
-                : "3 тренеров"
+              : "тренеров"
           }:`,
 
           keyboard
         );
 
 
-        return res
-          .status(200)
-          .json({
-            ok: true
-          });
+        return res.status(200).json({
+          ok: true
+        });
       }
 
 
       // ======================================================
-      // ВЫБОР КОНКРЕТНЫХ ТРЕНЕРОВ
+      // ВЫБОР ТРЕНЕРА ДЛЯ ПОСТЕРА
       // ======================================================
 
       if (
@@ -5522,45 +5949,50 @@ module.exports = async function handler(
         ) {
 
           await sendMessage(
+
             chat,
+
             "Выбор устарел. Начните создание инфографики заново.",
-            mainKeyboard()
+
+            [
+              [
+                {
+                  text:
+                    "🖼 Создать инфографику",
+                  callback_data:
+                    "trainer_poster_menu"
+                }
+              ]
+            ]
           );
 
 
-          return res
-            .status(200)
-            .json({
-              ok: true
-            });
+          return res.status(200).json({
+            ok: true
+          });
         }
 
 
-        const current =
+        const info =
           stateData(state);
 
 
         const count =
           Number(
-            current.count || 1
+            info.count || 1
           );
 
 
         let selected =
           Array.isArray(
-            current.selected
+            info.selected
           )
-            ? current.selected
-                .map(Number)
-                .filter(
-                  Number.isInteger
-                )
+            ? info.selected.map(Number)
             : [];
 
 
-        // ----------------------------------------------------
-        // Повторное нажатие снимает выбор
-        // ----------------------------------------------------
+        // Если нажали на уже выбранного —
+        // снимаем выбор.
 
         if (
           selected.includes(
@@ -5576,40 +6008,20 @@ module.exports = async function handler(
 
         } else {
 
-          // --------------------------------------------------
-          // Не даём выбрать больше указанного количества
-          // --------------------------------------------------
-
           if (
-            selected.length >=
+            selected.length <
             count
           ) {
 
-            await sendMessage(
-
-              chat,
-
-              `Уже выбрано ${count}. Если хотите заменить тренера, нажмите сначала на уже выбранного.`
-
+            selected.push(
+              trainerId
             );
-
-
-            return res
-              .status(200)
-              .json({
-                ok: true
-              });
           }
-
-
-          selected.push(
-            trainerId
-          );
         }
 
 
         // ----------------------------------------------------
-        // Если набрали нужное количество — выбираем тему
+        // Нужное количество выбрано
         // ----------------------------------------------------
 
         if (
@@ -5634,14 +6046,14 @@ module.exports = async function handler(
           );
 
 
-          const selectedTrainers =
+          const trainers =
             await getTrainersByIds(
               selected
             );
 
 
-          const selectedNames =
-            selectedTrainers
+          const names =
+            trainers
               .map(
                 (trainer) =>
                   `• ${trainer.name}`
@@ -5653,19 +6065,25 @@ module.exports = async function handler(
 
             chat,
 
-            `Выбрано:\n${selectedNames}\n\nКакой вариант создать?`,
+            `✅ Выбрано:
+
+${names}
+
+Теперь выберите оформление:`,
 
             [
 
               [
                 {
-                  text: "🟧 Цветной",
+                  text:
+                    "🟧 Цветной",
                   callback_data:
                     "poster_generate:color"
                 },
 
                 {
-                  text: "⬛ Ч/Б",
+                  text:
+                    "⬛ Ч/Б",
                   callback_data:
                     "poster_generate:bw"
                 }
@@ -5673,7 +6091,8 @@ module.exports = async function handler(
 
               [
                 {
-                  text: "🔄 Выбрать заново",
+                  text:
+                    "⬅️ Выбрать заново",
                   callback_data:
                     `poster_count:${count}`
                 }
@@ -5681,7 +6100,8 @@ module.exports = async function handler(
 
               [
                 {
-                  text: "🏠 В меню",
+                  text:
+                    "🏠 В меню",
                   callback_data:
                     "home"
                 }
@@ -5691,11 +6111,9 @@ module.exports = async function handler(
           );
 
 
-          return res
-            .status(200)
-            .json({
-              ok: true
-            });
+          return res.status(200).json({
+            ok: true
+          });
         }
 
 
@@ -5730,9 +6148,22 @@ module.exports = async function handler(
         keyboard.push([
 
           {
-            text: "⬅️ Назад",
+            text:
+              "⬅️ Начать выбор заново",
             callback_data:
-              "trainer_poster_menu"
+              `poster_count:${count}`
+          }
+
+        ]);
+
+
+        keyboard.push([
+
+          {
+            text:
+              "🏠 В меню",
+            callback_data:
+              "home"
           }
 
         ]);
@@ -5742,22 +6173,22 @@ module.exports = async function handler(
 
           chat,
 
-          `Выбрано: ${selected.length} из ${count}\n\nВыберите следующего тренера:`,
+          `Выбрано: ${selected.length} из ${count}.
+
+Выберите следующего тренера:`,
 
           keyboard
         );
 
 
-        return res
-          .status(200)
-          .json({
-            ok: true
-          });
+        return res.status(200).json({
+          ok: true
+        });
       }
 
 
       // ======================================================
-      // СОЗДАНИЕ ИНФОГРАФИКИ ТРЕНЕРОВ
+      // ГЕНЕРАЦИЯ ТРЕНЕРОВ
       // ======================================================
 
       if (
@@ -5771,9 +6202,10 @@ module.exports = async function handler(
 
 
         if (
-          !["color", "bw"].includes(
-            theme
-          )
+          ![
+            "color",
+            "bw"
+          ].includes(theme)
         ) {
 
           await sendMessage(
@@ -5782,11 +6214,9 @@ module.exports = async function handler(
           );
 
 
-          return res
-            .status(200)
-            .json({
-              ok: true
-            });
+          return res.status(200).json({
+            ok: true
+          });
         }
 
 
@@ -5804,29 +6234,36 @@ module.exports = async function handler(
 
             chat,
 
-            "Выбор тренеров устарел. Начните создание заново.",
+            "Выбор тренеров не найден. Начните создание заново.",
 
-            mainKeyboard()
+            [
+              [
+                {
+                  text:
+                    "🖼 Создать инфографику",
+                  callback_data:
+                    "trainer_poster_menu"
+                }
+              ]
+            ]
           );
 
 
-          return res
-            .status(200)
-            .json({
-              ok: true
-            });
+          return res.status(200).json({
+            ok: true
+          });
         }
 
 
-        const current =
+        const info =
           stateData(state);
 
 
-        const ids =
+        const selected =
           Array.isArray(
-            current.selected
+            info.selected
           )
-            ? current.selected
+            ? info.selected
                 .map(Number)
                 .filter(
                   Number.isInteger
@@ -5834,39 +6271,33 @@ module.exports = async function handler(
             : [];
 
 
-        if (!ids.length) {
+        if (!selected.length) {
 
           await sendMessage(
-
             chat,
-
-            "Тренеры не выбраны. Начните создание заново.",
-
-            mainKeyboard()
+            "Не выбраны тренеры."
           );
 
 
-          return res
-            .status(200)
-            .json({
-              ok: true
-            });
+          return res.status(200).json({
+            ok: true
+          });
         }
 
 
         await sendMessage(
           chat,
-          "⏳ Создаю инфографику…"
+          "⏳ Создаю A4-инфографику…"
         );
 
 
         if (
-          ids.length === 1
+          selected.length === 1
         ) {
 
           await sendPoster(
             chat,
-            ids[0],
+            selected[0],
             theme
           );
 
@@ -5874,7 +6305,7 @@ module.exports = async function handler(
 
           await sendMultiTrainerPoster(
             chat,
-            ids,
+            selected,
             theme
           );
         }
@@ -5887,21 +6318,23 @@ module.exports = async function handler(
 
           chat,
 
-          "✅ Готово.",
+          "✅ Готово. Инфографика отправлена выше.",
 
           [
 
             [
               {
-                text: "🖼 Создать ещё",
+                text:
+                  "🖼 Создать ещё",
                 callback_data:
-                  "create"
+                  "trainer_poster_menu"
               }
             ],
 
             [
               {
-                text: "🏠 В меню",
+                text:
+                  "🏠 В меню",
                 callback_data:
                   "home"
               }
@@ -5911,11 +6344,9 @@ module.exports = async function handler(
         );
 
 
-        return res
-          .status(200)
-          .json({
-            ok: true
-          });
+        return res.status(200).json({
+          ok: true
+        });
       }
 
 
@@ -5934,16 +6365,25 @@ module.exports = async function handler(
           "👤 ТРЕНЕРЫ «ТИТАН»\n\n";
 
 
-        trainers.forEach(
-          (trainer) => {
+        if (!trainers.length) {
 
-            text +=
-              `${trainer.name}\n` +
-              `📞 ${
-                trainer.phone || "—"
-              }\n\n`;
-          }
-        );
+          text +=
+            "Тренеры пока не добавлены.";
+
+        } else {
+
+          trainers.forEach(
+            (
+              trainer,
+              index
+            ) => {
+
+              text +=
+                `${index + 1}. ${trainer.name}\n` +
+                `📞 ${trainer.phone || "—"}\n\n`;
+            }
+          );
+        }
 
 
         await sendMessage(
@@ -5956,7 +6396,8 @@ module.exports = async function handler(
 
             [
               {
-                text: "🏠 В меню",
+                text:
+                  "⬅️ Назад",
                 callback_data:
                   "home"
               }
@@ -5966,11 +6407,9 @@ module.exports = async function handler(
         );
 
 
-        return res
-          .status(200)
-          .json({
-            ok: true
-          });
+        return res.status(200).json({
+          ok: true
+        });
       }
 
 
@@ -5983,11 +6422,9 @@ module.exports = async function handler(
         await showAdmin(chat);
 
 
-        return res
-          .status(200)
-          .json({
-            ok: true
-          });
+        return res.status(200).json({
+          ok: true
+        });
       }
 
 
@@ -6013,22 +6450,20 @@ module.exports = async function handler(
 
           chat,
 
-          "👤 Выберите тренера:",
+          "👤 ТРЕНЕРЫ\n\nВыберите тренера для редактирования:",
 
           keyboard
         );
 
 
-        return res
-          .status(200)
-          .json({
-            ok: true
-          });
+        return res.status(200).json({
+          ok: true
+        });
       }
 
 
       // ======================================================
-      // КАРТОЧКА ТРЕНЕРА
+      // КАРТОЧКА ТРЕНЕРА В АДМИНКЕ
       // ======================================================
 
       if (
@@ -6052,11 +6487,9 @@ module.exports = async function handler(
         );
 
 
-        return res
-          .status(200)
-          .json({
-            ok: true
-          });
+        return res.status(200).json({
+          ok: true
+        });
       }
 
 
@@ -6077,8 +6510,11 @@ module.exports = async function handler(
 
 
         await setState(
+
           chat,
+
           "edit_name",
+
           trainerId
         );
 
@@ -6089,11 +6525,9 @@ module.exports = async function handler(
         );
 
 
-        return res
-          .status(200)
-          .json({
-            ok: true
-          });
+        return res.status(200).json({
+          ok: true
+        });
       }
 
 
@@ -6114,8 +6548,11 @@ module.exports = async function handler(
 
 
         await setState(
+
           chat,
+
           "edit_phone",
+
           trainerId
         );
 
@@ -6126,11 +6563,9 @@ module.exports = async function handler(
         );
 
 
-        return res
-          .status(200)
-          .json({
-            ok: true
-          });
+        return res.status(200).json({
+          ok: true
+        });
       }
 
 
@@ -6144,27 +6579,27 @@ module.exports = async function handler(
       ) {
 
         await setState(
+
           chat,
+
           "add_trainer_name"
         );
 
 
         await sendMessage(
           chat,
-          "Введите имя и фамилию нового тренера:"
+          "Введите имя нового тренера:"
         );
 
 
-        return res
-          .status(200)
-          .json({
-            ok: true
-          });
+        return res.status(200).json({
+          ok: true
+        });
       }
 
 
       // ======================================================
-      // ПОДТВЕРЖДЕНИЕ УДАЛЕНИЯ ТРЕНЕРА
+      // УДАЛЕНИЕ ТРЕНЕРА — ПОДТВЕРЖДЕНИЕ
       // ======================================================
 
       if (
@@ -6189,15 +6624,13 @@ module.exports = async function handler(
 
           await sendMessage(
             chat,
-            "Тренер уже удалён."
+            "Тренер уже удалён или не найден."
           );
 
 
-          return res
-            .status(200)
-            .json({
-              ok: true
-            });
+          return res.status(200).json({
+            ok: true
+          });
         }
 
 
@@ -6205,23 +6638,29 @@ module.exports = async function handler(
 
           chat,
 
-          `⚠️ Удалить тренера?\n\n${trainer.name}\n\nВместе с тренером будут удалены его направления и расписание.`,
+          `⚠️ Удалить тренера?
+
+${trainer.name}
+
+Будут также удалены его направления и расписание.`,
 
           [
 
             [
               {
-                text: "🗑 Да, удалить",
+                text:
+                  "🗑 Да, удалить",
                 callback_data:
-                  `delete_trainer:${trainerId}`
+                  `delete_trainer:${trainer.id}`
               }
             ],
 
             [
               {
-                text: "❌ Отмена",
+                text:
+                  "❌ Отмена",
                 callback_data:
-                  `admin_trainer:${trainerId}`
+                  `admin_trainer:${trainer.id}`
               }
             ]
 
@@ -6229,11 +6668,9 @@ module.exports = async function handler(
         );
 
 
-        return res
-          .status(200)
-          .json({
-            ok: true
-          });
+        return res.status(200).json({
+          ok: true
+        });
       }
 
 
@@ -6253,11 +6690,9 @@ module.exports = async function handler(
           );
 
 
-        // ----------------------------------------------------
-        // Удаляем связанные записи явно.
-        // Так удаление работает даже если старая таблица
-        // была создана без ON DELETE CASCADE.
-        // ----------------------------------------------------
+        // Удаляем дочерние записи явно.
+        // Даже если старая версия таблицы была создана
+        // без ON DELETE CASCADE, удаление всё равно сработает.
 
         await sql`
           DELETE FROM schedule
@@ -6273,12 +6708,8 @@ module.exports = async function handler(
 
         const deleted =
           await sql`
-
             DELETE FROM trainers
-
-            WHERE id =
-              ${trainerId}
-
+            WHERE id = ${trainerId}
             RETURNING name
           `;
 
@@ -6286,21 +6717,18 @@ module.exports = async function handler(
         await clearState(chat);
 
 
-        if (!deleted.length) {
+        if (deleted.length) {
 
           await sendMessage(
             chat,
-            "Тренер уже удалён."
+            `✅ Тренер «${deleted[0].name}» удалён.`
           );
 
         } else {
 
           await sendMessage(
-
             chat,
-
-            `✅ ${deleted[0].name} удалён(а).`
-
+            "Тренер уже был удалён."
           );
         }
 
@@ -6315,17 +6743,15 @@ module.exports = async function handler(
 
           chat,
 
-          "👤 Выберите тренера:",
+          "👤 ТРЕНЕРЫ\n\nВыберите тренера для редактирования:",
 
           keyboard
         );
 
 
-        return res
-          .status(200)
-          .json({
-            ok: true
-          });
+        return res.status(200).json({
+          ok: true
+        });
       }
 
 
@@ -6354,16 +6780,14 @@ module.exports = async function handler(
         );
 
 
-        return res
-          .status(200)
-          .json({
-            ok: true
-          });
+        return res.status(200).json({
+          ok: true
+        });
       }
 
 
       // ======================================================
-      // КАРТОЧКА ЗАНЯТИЯ
+      // КОНКРЕТНОЕ ЗАНЯТИЕ
       // ======================================================
 
       if (
@@ -6372,7 +6796,7 @@ module.exports = async function handler(
         )
       ) {
 
-        const scheduleId =
+        const lessonId =
           Number(
             data.split(":")[1]
           );
@@ -6383,15 +6807,13 @@ module.exports = async function handler(
 
         await showLessonAdmin(
           chat,
-          scheduleId
+          lessonId
         );
 
 
-        return res
-          .status(200)
-          .json({
-            ok: true
-          });
+        return res.status(200).json({
+          ok: true
+        });
       }
 
 
@@ -6405,17 +6827,21 @@ module.exports = async function handler(
         )
       ) {
 
-        const scheduleId =
+        const lessonId =
           Number(
             data.split(":")[1]
           );
 
 
         await setState(
+
           chat,
+
           "lesson_day",
+
           null,
-          scheduleId
+
+          lessonId
         );
 
 
@@ -6425,11 +6851,9 @@ module.exports = async function handler(
         );
 
 
-        return res
-          .status(200)
-          .json({
-            ok: true
-          });
+        return res.status(200).json({
+          ok: true
+        });
       }
 
 
@@ -6443,17 +6867,21 @@ module.exports = async function handler(
         )
       ) {
 
-        const scheduleId =
+        const lessonId =
           Number(
             data.split(":")[1]
           );
 
 
         await setState(
+
           chat,
+
           "lesson_time",
+
           null,
-          scheduleId
+
+          lessonId
         );
 
 
@@ -6463,11 +6891,9 @@ module.exports = async function handler(
         );
 
 
-        return res
-          .status(200)
-          .json({
-            ok: true
-          });
+        return res.status(200).json({
+          ok: true
+        });
       }
 
 
@@ -6481,31 +6907,33 @@ module.exports = async function handler(
         )
       ) {
 
-        const scheduleId =
+        const lessonId =
           Number(
             data.split(":")[1]
           );
 
 
         await setState(
+
           chat,
+
           "lesson_direction",
+
           null,
-          scheduleId
+
+          lessonId
         );
 
 
         await sendMessage(
           chat,
-          "Введите новое название направления:"
+          "Введите название направления:"
         );
 
 
-        return res
-          .status(200)
-          .json({
-            ok: true
-          });
+        return res.status(200).json({
+          ok: true
+        });
       }
 
 
@@ -6519,31 +6947,33 @@ module.exports = async function handler(
         )
       ) {
 
-        const scheduleId =
+        const lessonId =
           Number(
             data.split(":")[1]
           );
 
 
         await setState(
+
           chat,
+
           "lesson_hall",
+
           null,
-          scheduleId
+
+          lessonId
         );
 
 
         await sendMessage(
           chat,
-          "Введите 1, 2, 3, 5 или «Тренажерный зал»."
+          "Введите зал: 1, 2, 3, 5 или «Тренажерный зал»:"
         );
 
 
-        return res
-          .status(200)
-          .json({
-            ok: true
-          });
+        return res.status(200).json({
+          ok: true
+        });
       }
 
 
@@ -6557,7 +6987,7 @@ module.exports = async function handler(
         )
       ) {
 
-        const scheduleId =
+        const lessonId =
           Number(
             data.split(":")[1]
           );
@@ -6565,16 +6995,13 @@ module.exports = async function handler(
 
         const rows =
           await sql`
-
-            SELECT trainer_id
-
-            FROM schedule
-
-            WHERE id =
-              ${scheduleId}
-
-            LIMIT 1
+            DELETE FROM schedule
+            WHERE id = ${lessonId}
+            RETURNING trainer_id
           `;
+
+
+        await clearState(chat);
 
 
         if (!rows.length) {
@@ -6585,25 +7012,14 @@ module.exports = async function handler(
           );
 
 
-          return res
-            .status(200)
-            .json({
-              ok: true
-            });
+          return res.status(200).json({
+            ok: true
+          });
         }
 
 
         const trainerId =
           rows[0].trainer_id;
-
-
-        await sql`
-          DELETE FROM schedule
-          WHERE id = ${scheduleId}
-        `;
-
-
-        await clearState(chat);
 
 
         await sendMessage(
@@ -6618,11 +7034,9 @@ module.exports = async function handler(
         );
 
 
-        return res
-          .status(200)
-          .json({
-            ok: true
-          });
+        return res.status(200).json({
+          ok: true
+        });
       }
 
 
@@ -6643,28 +7057,29 @@ module.exports = async function handler(
 
 
         await setState(
+
           chat,
+
           "add_lesson_day",
+
           trainerId
         );
 
 
         await sendMessage(
           chat,
-          "Введите день: ПН, ВТ, СР, ЧТ, ПТ, СБ или ВС."
+          "Введите день занятия: ПН, ВТ, СР, ЧТ, ПТ, СБ или ВС."
         );
 
 
-        return res
-          .status(200)
-          .json({
-            ok: true
-          });
+        return res.status(200).json({
+          ok: true
+        });
       }
 
 
       // ======================================================
-      // НАПРАВЛЕНИЯ
+      // НАПРАВЛЕНИЯ ТРЕНЕРА
       // ======================================================
 
       if (
@@ -6688,16 +7103,14 @@ module.exports = async function handler(
         );
 
 
-        return res
-          .status(200)
-          .json({
-            ok: true
-          });
+        return res.status(200).json({
+          ok: true
+        });
       }
 
 
       // ======================================================
-      // КАРТОЧКА НАПРАВЛЕНИЯ
+      // КОНКРЕТНОЕ НАПРАВЛЕНИЕ
       // ======================================================
 
       if (
@@ -6721,11 +7134,9 @@ module.exports = async function handler(
         );
 
 
-        return res
-          .status(200)
-          .json({
-            ok: true
-          });
+        return res.status(200).json({
+          ok: true
+        });
       }
 
 
@@ -6746,9 +7157,13 @@ module.exports = async function handler(
 
 
         await setState(
+
           chat,
+
           "direction_name",
+
           null,
+
           directionId
         );
 
@@ -6759,11 +7174,9 @@ module.exports = async function handler(
         );
 
 
-        return res
-          .status(200)
-          .json({
-            ok: true
-          });
+        return res.status(200).json({
+          ok: true
+        });
       }
 
 
@@ -6784,9 +7197,13 @@ module.exports = async function handler(
 
 
         await setState(
+
           chat,
+
           "direction_desc",
+
           null,
+
           directionId
         );
 
@@ -6797,11 +7214,9 @@ module.exports = async function handler(
         );
 
 
-        return res
-          .status(200)
-          .json({
-            ok: true
-          });
+        return res.status(200).json({
+          ok: true
+        });
       }
 
 
@@ -6823,16 +7238,13 @@ module.exports = async function handler(
 
         const rows =
           await sql`
-
-            SELECT trainer_id
-
-            FROM directions
-
-            WHERE id =
-              ${directionId}
-
-            LIMIT 1
+            DELETE FROM directions
+            WHERE id = ${directionId}
+            RETURNING trainer_id
           `;
+
+
+        await clearState(chat);
 
 
         if (!rows.length) {
@@ -6843,25 +7255,14 @@ module.exports = async function handler(
           );
 
 
-          return res
-            .status(200)
-            .json({
-              ok: true
-            });
+          return res.status(200).json({
+            ok: true
+          });
         }
 
 
         const trainerId =
           rows[0].trainer_id;
-
-
-        await sql`
-          DELETE FROM directions
-          WHERE id = ${directionId}
-        `;
-
-
-        await clearState(chat);
 
 
         await sendMessage(
@@ -6876,11 +7277,9 @@ module.exports = async function handler(
         );
 
 
-        return res
-          .status(200)
-          .json({
-            ok: true
-          });
+        return res.status(200).json({
+          ok: true
+        });
       }
 
 
@@ -6901,8 +7300,11 @@ module.exports = async function handler(
 
 
         await setState(
+
           chat,
+
           "add_direction_name",
+
           trainerId
         );
 
@@ -6913,11 +7315,9 @@ module.exports = async function handler(
         );
 
 
-        return res
-          .status(200)
-          .json({
-            ok: true
-          });
+        return res.status(200).json({
+          ok: true
+        });
       }
 
 
@@ -6934,19 +7334,23 @@ module.exports = async function handler(
 
           chat,
 
-          "📅 ОБЩЕЕ РАСПИСАНИЕ\n\nКакой вариант создать?",
+          `📅 ОБЩЕЕ РАСПИСАНИЕ
+
+Выберите оформление:`,
 
           [
 
             [
               {
-                text: "🟧 Цветной",
+                text:
+                  "🟧 Цветное",
                 callback_data:
                   "week_color"
               },
 
               {
-                text: "⬛ Ч/Б",
+                text:
+                  "⬛ Ч/Б",
                 callback_data:
                   "week_bw"
               }
@@ -6954,9 +7358,10 @@ module.exports = async function handler(
 
             [
               {
-                text: "🏠 В меню",
+                text:
+                  "⬅️ Назад",
                 callback_data:
-                  "home"
+                  "create"
               }
             ]
 
@@ -6964,16 +7369,14 @@ module.exports = async function handler(
         );
 
 
-        return res
-          .status(200)
-          .json({
-            ok: true
-          });
+        return res.status(200).json({
+          ok: true
+        });
       }
 
 
       // ======================================================
-      // ЦВЕТНОЕ ОБЩЕЕ РАСПИСАНИЕ
+      // ОБЩЕЕ РАСПИСАНИЕ — ЦВЕТ
       // ======================================================
 
       if (
@@ -6997,13 +7400,14 @@ module.exports = async function handler(
 
           chat,
 
-          "✅ Готово.",
+          "✅ Цветное расписание готово.",
 
           [
 
             [
               {
-                text: "📅 Создать ещё",
+                text:
+                  "📅 Создать ещё",
                 callback_data:
                   "week"
               }
@@ -7011,7 +7415,8 @@ module.exports = async function handler(
 
             [
               {
-                text: "🏠 В меню",
+                text:
+                  "🏠 В меню",
                 callback_data:
                   "home"
               }
@@ -7021,16 +7426,14 @@ module.exports = async function handler(
         );
 
 
-        return res
-          .status(200)
-          .json({
-            ok: true
-          });
+        return res.status(200).json({
+          ok: true
+        });
       }
 
 
       // ======================================================
-      // Ч/Б ОБЩЕЕ РАСПИСАНИЕ
+      // ОБЩЕЕ РАСПИСАНИЕ — Ч/Б
       // ======================================================
 
       if (
@@ -7054,13 +7457,14 @@ module.exports = async function handler(
 
           chat,
 
-          "✅ Готово.",
+          "✅ Чёрно-белое расписание готово.",
 
           [
 
             [
               {
-                text: "📅 Создать ещё",
+                text:
+                  "📅 Создать ещё",
                 callback_data:
                   "week"
               }
@@ -7068,7 +7472,8 @@ module.exports = async function handler(
 
             [
               {
-                text: "🏠 В меню",
+                text:
+                  "🏠 В меню",
                 callback_data:
                   "home"
               }
@@ -7078,11 +7483,9 @@ module.exports = async function handler(
         );
 
 
-        return res
-          .status(200)
-          .json({
-            ok: true
-          });
+        return res.status(200).json({
+          ok: true
+        });
       }
 
 
@@ -7094,36 +7497,39 @@ module.exports = async function handler(
 
         chat,
 
-        "Команда устарела. Вернитесь в главное меню.",
+        "Эта кнопка больше неактуальна. Вернитесь в главное меню.",
 
-        mainKeyboard()
+        [
+
+          [
+            {
+              text:
+                "🏠 Главное меню",
+              callback_data:
+                "home"
+            }
+          ]
+
+        ]
       );
 
 
-      return res
-        .status(200)
-        .json({
-          ok: true
-        });
+      return res.status(200).json({
+        ok: true
+      });
     }
 
 
     // ========================================================
-    // TELEGRAM UPDATE БЕЗ MESSAGE / CALLBACK
+    // НЕИЗВЕСТНЫЙ UPDATE
     // ========================================================
 
-    return res
-      .status(200)
-      .json({
-        ok: true
-      });
+    return res.status(200).json({
+      ok: true
+    });
 
 
   } catch (error) {
-
-    // ========================================================
-    // ЛОГИРУЕМ ОШИБКУ
-    // ========================================================
 
     console.error(
       "TITAN WEBHOOK ERROR:",
@@ -7132,21 +7538,19 @@ module.exports = async function handler(
 
 
     // Telegram должен получить 200,
-    // иначе он начнёт повторно присылать тот же update.
+    // иначе начнёт повторно присылать тот же update.
 
-    return res
-      .status(200)
-      .json({
-        ok: false,
-        error:
-          error?.message ||
-          "Unknown error"
-      });
+    return res.status(200).json({
+      ok: false,
+      error:
+        error?.message ||
+        String(error)
+    });
   }
 };
 
 
 // ============================================================
 // КОНЕЦ БЛОКА 3
-// КОНЕЦ ФАЙЛА api/webhook.js
+// КОНЕЦ api/webhook.js
 // ============================================================
