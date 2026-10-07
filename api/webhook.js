@@ -3344,10 +3344,16 @@ function renderTrainerDirections(
       : 15;
 
 
-  const descLineHeight =
-    compact
-      ? 15
-      : 19;
+  const descSize =
+  compact
+    ? 14
+    : 19;
+
+
+const descLineHeight =
+  compact
+    ? 18
+    : 24;
 
 
   const nameToDescription =
@@ -3361,20 +3367,19 @@ function renderTrainerDirections(
       ? 9
       : 13;
 
-
-  const maxChars =
-    useTwoColumns
-      ? (
-          compact
-            ? 37
-            : 44
-        )
-      : (
-          compact
-            ? 72
-            : 88
-        );
-
+const maxChars =
+  useTwoColumns
+    ? (
+        compact
+          ? 42
+          : 55
+      )
+    : (
+        compact
+          ? 82
+          : 110
+      );
+  
 
   // ==========================================================
   // СОЗДАЁМ БЛОКИ НАПРАВЛЕНИЙ
