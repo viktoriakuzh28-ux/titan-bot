@@ -3232,21 +3232,21 @@ function renderTrainerDirections(
   let svg = "";
 
 
-  if (
-    layout === "single"
-  ) {
+  // ==========================================================
+  // ОДИН ТРЕНЕР
+  // ==========================================================
+
+  if (layout === "single") {
 
     const titleSize = 22;
     const descSize = 18;
-    const lineHeight = 22;
-    const gap = 13;
+    const lineHeight = 23;
+    const gap = 16;
 
     let cursorY = y;
 
 
-    for (
-      const direction of directions
-    ) {
+    for (const direction of directions) {
 
       svg += posterText(
         x,
@@ -3260,11 +3260,12 @@ function renderTrainerDirections(
       );
 
 
+      // Полное описание.
+      // Количество строк НЕ ограничиваем.
       const lines =
-        posterWrap(
+        posterWrapFull(
           direction.description,
-          68,
-          2
+          72
         );
 
 
@@ -3272,7 +3273,7 @@ function renderTrainerDirections(
 
         svg += posterMultiline(
           x,
-          cursorY + 25,
+          cursorY + 27,
           lines,
           {
             size: descSize,
@@ -3285,7 +3286,7 @@ function renderTrainerDirections(
 
 
       cursorY +=
-        34 +
+        37 +
         Math.max(
           1,
           lines.length
@@ -3302,6 +3303,10 @@ function renderTrainerDirections(
   }
 
 
+  // ==========================================================
+  // ДВА / ТРИ ТРЕНЕРА
+  // ==========================================================
+
   const compact =
     layout === "triple";
 
@@ -3315,7 +3320,7 @@ function renderTrainerDirections(
   const columnGap =
     compact
       ? 18
-      : 24;
+      : 26;
 
 
   const columnWidth =
@@ -3345,66 +3350,84 @@ function renderTrainerDirections(
       : 19;
 
 
-  const blockHeight =
+  const nameToDescription =
     compact
-      ? 58
-      : 75;
+      ? 19
+      : 24;
 
 
-  const countPerColumn =
+  const bottomGap =
+    compact
+      ? 9
+      : 13;
+
+
+  const maxChars =
     useTwoColumns
-      ? Math.ceil(
-          directions.length / 2
+      ? (
+          compact
+            ? 37
+            : 44
         )
-      : directions.length;
-
-
-  directions.forEach(
-    (
-      direction,
-      index
-    ) => {
-
-      const column =
-        useTwoColumns
-          ? Math.floor(
-              index /
-              countPerColumn
-            )
-          : 0;
-
-
-      const row =
-        useTwoColumns
-          ? index %
-            countPerColumn
-          : index;
-
-
-      const dx =
-        x +
-        column *
-        (
-          columnWidth +
-          columnGap
+      : (
+          compact
+            ? 72
+            : 88
         );
 
 
-      const dy =
-        y +
-        row *
-        blockHeight;
+  // ==========================================================
+  // СОЗДАЁМ БЛОКИ НАПРАВЛЕНИЙ
+  //
+  // У каждого направления своя реальная высота.
+  // Никаких "...".
+  // ==========================================================
 
+  const blocks =
+    directions.map(
+      direction => {
+
+        const descriptionLines =
+          posterWrapFull(
+            direction.description,
+            maxChars
+          );
+
+
+        const height =
+          nameToDescription +
+          Math.max(
+            1,
+            descriptionLines.length
+          ) *
+          descLineHeight +
+          bottomGap;
+
+
+        return {
+          direction,
+          descriptionLines,
+          height
+        };
+      }
+    );
+
+
+  // ==========================================================
+  // ОДНА КОЛОНКА
+  // ==========================================================
+
+  if (!useTwoColumns) {
+
+    let cursorY = y;
+
+
+    for (const block of blocks) {
 
       svg += posterText(
-        dx,
-        dy,
-        posterCut(
-          direction.name,
-          compact
-            ? 31
-            : 36
-        ),
+        x,
+        cursorY,
+        block.direction.name,
         {
           size: nameSize,
           weight: 900,
@@ -3413,54 +3436,218 @@ function renderTrainerDirections(
       );
 
 
-      const descriptionLines =
-        posterWrap(
-          direction.description,
-          compact
-            ? 37
-            : 44,
-          compact
-            ? 2
-            : 2
+      if (
+        block.descriptionLines.length
+      ) {
+
+        svg += posterMultiline(
+          x,
+          cursorY +
+          nameToDescription,
+          block.descriptionLines,
+          {
+            size: descSize,
+            weight: 500,
+            fill: theme.muted,
+            lineHeight:
+              descLineHeight
+          }
         );
+      }
 
 
-      svg += posterMultiline(
-        dx,
-        dy + (
-          compact
-            ? 19
-            : 24
-        ),
-        descriptionLines,
+      cursorY +=
+        block.height;
+    }
+
+
+    return {
+      svg,
+      height:
+        cursorY - y
+    };
+  }
+
+
+  // ==========================================================
+  // ДВЕ КОЛОНКИ
+  //
+  // Распределяем направления по колонкам так,
+  // чтобы их высота была примерно одинаковой.
+  // ==========================================================
+
+  const left = [];
+  const right = [];
+
+  let leftHeight = 0;
+  let rightHeight = 0;
+
+
+  for (const block of blocks) {
+
+    if (
+      leftHeight <=
+      rightHeight
+    ) {
+
+      left.push(block);
+      leftHeight +=
+        block.height;
+
+    } else {
+
+      right.push(block);
+      rightHeight +=
+        block.height;
+    }
+  }
+
+
+  function renderDirectionColumn(
+    column,
+    columnX
+  ) {
+
+    let result = "";
+    let cursorY = y;
+
+
+    for (const block of column) {
+
+      result += posterText(
+        columnX,
+        cursorY,
+        block.direction.name,
         {
-          size: descSize,
-          weight: 500,
-          fill: theme.muted,
-          lineHeight:
-            descLineHeight
+          size: nameSize,
+          weight: 900,
+          fill: theme.accent
         }
       );
+
+
+      if (
+        block.descriptionLines.length
+      ) {
+
+        result += posterMultiline(
+          columnX,
+          cursorY +
+          nameToDescription,
+          block.descriptionLines,
+          {
+            size: descSize,
+            weight: 500,
+            fill: theme.muted,
+            lineHeight:
+              descLineHeight
+          }
+        );
+      }
+
+
+      cursorY +=
+        block.height;
     }
-  );
 
 
-  const rows =
-    useTwoColumns
-      ? Math.ceil(
-          directions.length / 2
-        )
-      : directions.length;
+    return result;
+  }
+
+
+  svg +=
+    renderDirectionColumn(
+      left,
+      x
+    );
+
+
+  svg +=
+    renderDirectionColumn(
+      right,
+      x +
+      columnWidth +
+      columnGap
+    );
 
 
   return {
     svg,
     height:
-      rows *
-      blockHeight
+      Math.max(
+        leftHeight,
+        rightHeight
+      )
   };
 }
 
+
+// ============================================================
+// ПОЛНЫЙ ПЕРЕНОС ОПИСАНИЯ
+// БЕЗ СОКРАЩЕНИЯ И БЕЗ "..."
+// ============================================================
+
+function posterWrapFull(
+  text,
+  maxChars = 60
+) {
+
+  const value =
+    String(text || "")
+      .trim();
+
+
+  if (!value) {
+    return [];
+  }
+
+
+  const words =
+    value.split(/\s+/);
+
+
+  const lines = [];
+
+  let current = "";
+
+
+  for (const word of words) {
+
+    const next =
+      current
+        ? `${current} ${word}`
+        : word;
+
+
+    if (
+      next.length <= maxChars
+    ) {
+
+      current = next;
+
+    } else {
+
+      if (current) {
+        lines.push(current);
+      }
+
+
+      // Если одно слово вдруг длиннее
+      // допустимой строки, всё равно
+      // сохраняем его полностью.
+
+      current = word;
+    }
+  }
+
+
+  if (current) {
+    lines.push(current);
+  }
+
+
+  return lines;
+}
 
 // ============================================================
 // ОДНА КОЛОНКА РАСПИСАНИЯ
