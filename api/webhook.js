@@ -23,7 +23,9 @@ async function sendMessage(chat, text, keyboard) {
     chat_id: chat,
     text,
     reply_markup: keyboard
-      ? { inline_keyboard: keyboard }
+      ? {
+          inline_keyboard: keyboard
+        }
       : undefined
   });
 }
@@ -94,6 +96,7 @@ async function initDatabase() {
     await seedDatabase();
   }
 }
+
 // ==========================================
 // СТАРТОВЫЕ ДАННЫЕ ТРЕНЕРОВ
 // ==========================================
@@ -323,7 +326,7 @@ async function seedDatabase() {
     }
   }
 }
-// ==========================================
+ // ==========================================
 // ПОЛУЧЕНИЕ ДАННЫХ ИЗ NEON
 // ==========================================
 
@@ -343,7 +346,9 @@ async function getTrainer(id) {
     LIMIT 1
   `;
 
-  if (!rows.length) return null;
+  if (!rows.length) {
+    return null;
+  }
 
   const trainer = rows[0];
 
@@ -366,6 +371,113 @@ async function getTrainer(id) {
     directions,
     schedule
   };
+}
+
+async function getTrainersByIds(ids) {
+  if (!ids || !ids.length) {
+    return [];
+  }
+
+  const cleanIds = ids
+    .map(Number)
+    .filter(Number.isInteger);
+
+  if (!cleanIds.length) {
+    return [];
+  }
+
+  const trainers = await sql`
+    SELECT *
+    FROM trainers
+    WHERE id = ANY(${cleanIds})
+  `;
+
+  const result = [];
+
+  for (const id of cleanIds) {
+    const trainer = trainers.find(
+      t => Number(t.id) === Number(id)
+    );
+
+    if (!trainer) {
+      continue;
+    }
+
+    const directions = await sql`
+      SELECT *
+      FROM directions
+      WHERE trainer_id = ${id}
+      ORDER BY sort_order, id
+    `;
+
+    const schedule = await sql`
+      SELECT *
+      FROM schedule
+      WHERE trainer_id = ${id}
+      ORDER BY sort_order, id
+    `;
+
+    result.push({
+      ...trainer,
+      directions,
+      schedule
+    });
+  }
+
+  return result;
+}
+
+// ==========================================
+// СОСТОЯНИЕ РЕДАКТИРОВАНИЯ
+// ==========================================
+
+async function setState(
+  chat,
+  action,
+  trainerId = null,
+  scheduleId = null,
+  data = {}
+) {
+  await sql`
+    INSERT INTO bot_state (
+      chat_id,
+      action,
+      trainer_id,
+      schedule_id,
+      data
+    )
+    VALUES (
+      ${chat},
+      ${action},
+      ${trainerId},
+      ${scheduleId},
+      ${JSON.stringify(data)}::jsonb
+    )
+    ON CONFLICT (chat_id)
+    DO UPDATE SET
+      action = EXCLUDED.action,
+      trainer_id = EXCLUDED.trainer_id,
+      schedule_id = EXCLUDED.schedule_id,
+      data = EXCLUDED.data
+  `;
+}
+
+async function getState(chat) {
+  const rows = await sql`
+    SELECT *
+    FROM bot_state
+    WHERE chat_id = ${chat}
+    LIMIT 1
+  `;
+
+  return rows[0] || null;
+}
+
+async function clearState(chat) {
+  await sql`
+    DELETE FROM bot_state
+    WHERE chat_id = ${chat}
+  `;
 }
 
 // ==========================================
@@ -473,6 +585,7 @@ async function trainerKeyboard(prefix) {
 
   return keyboard;
 }
+
 // ==========================================
 // АДМИН-МЕНЮ
 // ==========================================
@@ -1197,64 +1310,172 @@ function svgLines(lines, x, y, size, color, weight, gap) {
   `).join("");
 }
 
-function makePoster(t, theme = "color", trainerNumber = 1) {
+// ==========================================
+// ИНФОГРАФИКА ТРЕНЕРОВ — 1 / 2 / 3
+// ==========================================
+
+function makeMultiTrainerPoster(
+  trainers,
+  theme = "color"
+) {
   const bw = theme === "bw";
 
   const C = {
     bg: bw ? "#ffffff" : "#090909",
-    surface: bw ? "#f1f1f1" : "#151515",
+    surface: bw ? "#f3f3f3" : "#151515",
     surface2: bw ? "#fafafa" : "#101010",
     text: bw ? "#050505" : "#ffffff",
-    muted: bw ? "#4d4d4d" : "#d0d0d0",
+    muted: bw ? "#555555" : "#bdbdbd",
     accent: bw ? "#000000" : "#ff6a00",
-    line: bw ? "#c9c9c9" : "#383838",
+    line: bw ? "#cccccc" : "#333333",
     ghost: bw ? "#eeeeee" : "#151515"
   };
 
   const W = 1240;
-  const PAD = 72;
+  const PAD = 60;
 
   // ========================================
-  // НАПРАВЛЕНИЯ
+  // ВЫСОТА КАРТОЧЕК
   // ========================================
 
-  const directionStart = 430;
+  const cards = trainers.map(trainer => {
+    const schedule =
+      Array.isArray(trainer.schedule)
+        ? trainer.schedule
+        : [];
 
-  const directionData = t.directions.length
-    ? t.directions
-    : [{
-        name: "НАПРАВЛЕНИЯ",
-        description: "Добавьте направления через управление данными."
-      }];
+    const rows = Math.max(
+      1,
+      schedule.length
+    );
 
-  const preparedDirections = directionData.map(d => {
-    const descLines = splitText(
-      d.description || "",
-      65
-    ).slice(0, 2);
+    const height =
+      155 +
+      rows * 58 +
+      45;
 
     return {
-      name: d.name,
-      descLines,
-      height: descLines.length > 1 ? 132 : 112
+      trainer,
+      schedule,
+      height
     };
   });
 
-  let currentDirectionY = directionStart;
+  const GAP = 28;
+  const HEADER_H = 260;
+  const FOOTER_H = 160;
 
-  const directionSvg = preparedDirections.map(d => {
-    const y = currentDirectionY;
+  const cardsHeight =
+    cards.reduce(
+      (sum, item) => sum + item.height,
+      0
+    ) +
+    Math.max(0, cards.length - 1) * GAP;
 
-    currentDirectionY += d.height + 16;
+  const H =
+    HEADER_H +
+    cardsHeight +
+    FOOTER_H;
 
-    return `
+  // ========================================
+  // SVG
+  // ========================================
+
+  let svg = `
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="${W}"
+      height="${H}"
+      viewBox="0 0 ${W} ${H}"
+    >
+
+      <rect
+        width="${W}"
+        height="${H}"
+        fill="${C.bg}"
+      />
+
+      <rect
+        x="0"
+        y="0"
+        width="${W}"
+        height="16"
+        fill="${C.accent}"
+      />
+
+      <text
+        x="${W - PAD}"
+        y="220"
+        text-anchor="end"
+        fill="${C.ghost}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="190"
+        font-weight="900"
+      >ТИТАН</text>
+
+      <text
+        x="${PAD}"
+        y="82"
+        fill="${C.accent}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="50"
+        font-weight="900"
+      >ТИТАН</text>
+
+      <text
+        x="${W - PAD}"
+        y="80"
+        text-anchor="end"
+        fill="${C.muted}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="20"
+        font-weight="900"
+        letter-spacing="3"
+      >РАСПИСАНИЕ ТРЕНЕРОВ</text>
+
+      <line
+        x1="${PAD}"
+        y1="112"
+        x2="${W - PAD}"
+        y2="112"
+        stroke="${C.accent}"
+        stroke-width="5"
+      />
+
+      <text
+        x="${PAD}"
+        y="180"
+        fill="${C.text}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="52"
+        font-weight="900"
+      >ТРЕНЕРЫ «ТИТАН»</text>
+
+      <text
+        x="${PAD}"
+        y="220"
+        fill="${C.muted}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="22"
+        font-weight="800"
+        letter-spacing="2"
+      >АКТУАЛЬНОЕ РАСПИСАНИЕ</text>
+  `;
+
+  let y = HEADER_H;
+
+  cards.forEach((item, trainerIndex) => {
+    const t = item.trainer;
+
+    svg += `
       <g>
+
         <rect
           x="${PAD}"
           y="${y}"
           width="${W - PAD * 2}"
-          height="${d.height}"
-          rx="20"
+          height="${item.height}"
+          rx="24"
           fill="${C.surface}"
           stroke="${C.line}"
           stroke-width="2"
@@ -1264,501 +1485,177 @@ function makePoster(t, theme = "color", trainerNumber = 1) {
           x="${PAD}"
           y="${y}"
           width="12"
-          height="${d.height}"
+          height="${item.height}"
           rx="6"
           fill="${C.accent}"
         />
 
         <text
-          x="${PAD + 38}"
-          y="${y + 44}"
-          fill="${C.text}"
+          x="${PAD + 35}"
+          y="${y + 48}"
+          fill="${C.accent}"
           font-family="Arial, Helvetica, sans-serif"
-          font-size="34"
+          font-size="20"
           font-weight="900"
-        >${esc(d.name).toUpperCase()}</text>
-
-        ${svgLines(
-          d.descLines,
-          PAD + 38,
-          y + 82,
-          25,
-          C.muted,
-          700,
-          31
-        )}
-      </g>
-    `;
-  }).join("");
-
-  // ========================================
-  // РАСПИСАНИЕ
-  // ========================================
-
-  const scheduleTitleY = currentDirectionY + 65;
-  const scheduleHeaderY = scheduleTitleY + 72;
-  const scheduleStartY = scheduleHeaderY + 55;
-  const scheduleRowH = 88;
-
-  let lastDay = "";
-
-  const scheduleSvg = t.schedule.map((s, i) => {
-    const y = scheduleStartY + i * scheduleRowH;
-    const showDay = s.day !== lastDay;
-
-    lastDay = s.day;
-
-    return `
-      <g>
-        <rect
-          x="${PAD}"
-          y="${y}"
-          width="${W - PAD * 2}"
-          height="76"
-          rx="16"
-          fill="${i % 2 === 0 ? C.surface : C.surface2}"
-          stroke="${C.line}"
-          stroke-width="2"
-        />
-
-        ${
-          showDay
-            ? `
-              <rect
-                x="${PAD + 14}"
-                y="${y + 10}"
-                width="94"
-                height="56"
-                rx="13"
-                fill="${C.accent}"
-              />
-
-              <text
-                x="${PAD + 61}"
-                y="${y + 49}"
-                text-anchor="middle"
-                fill="${bw ? "#ffffff" : "#090909"}"
-                font-family="Arial, Helvetica, sans-serif"
-                font-size="31"
-                font-weight="900"
-              >${esc(s.day)}</text>
-            `
-            : `
-              <line
-                x1="${PAD + 61}"
-                y1="${y}"
-                x2="${PAD + 61}"
-                y2="${y + 76}"
-                stroke="${C.line}"
-                stroke-width="3"
-              />
-            `
-        }
+        >${String(trainerIndex + 1).padStart(2, "0")}</text>
 
         <text
-          x="${PAD + 150}"
+          x="${PAD + 90}"
           y="${y + 50}"
           fill="${C.text}"
           font-family="Arial, Helvetica, sans-serif"
-          font-size="32"
+          font-size="38"
           font-weight="900"
-        >${esc(s.time)}</text>
+        >${esc(t.name).toUpperCase()}</text>
 
         <text
-          x="${PAD + 405}"
-          y="${y + 49}"
-          fill="${C.text}"
-          font-family="Arial, Helvetica, sans-serif"
-          font-size="27"
-          font-weight="900"
-        >${esc(s.direction).toUpperCase()}</text>
-
-        <text
-          x="${W - PAD - 18}"
-          y="${y + 49}"
+          x="${W - PAD - 28}"
+          y="${y + 48}"
           text-anchor="end"
           fill="${C.accent}"
           font-family="Arial, Helvetica, sans-serif"
-          font-size="27"
+          font-size="25"
           font-weight="900"
-        >${esc(shortHall(s.hall))}</text>
-      </g>
-    `;
-  }).join("");
+        >${esc(t.phone || "")}</text>
 
-  // ========================================
-  // РАСШИФРОВКА ЗАЛОВ
-  // ========================================
-
-  const halls = [
-    ...new Set(t.schedule.map(s => s.hall))
-  ];
-
-  const hallsTitleY =
-    scheduleStartY +
-    t.schedule.length * scheduleRowH +
-    75;
-
-  const hallCardsStartY = hallsTitleY + 65;
-  const hallRowH = 108;
-
-  const hallRows = Math.max(
-    1,
-    Math.ceil(halls.length / 2)
-  );
-
-  const hallSvg = halls.map((hall, i) => {
-    const col = i % 2;
-    const row = Math.floor(i / 2);
-
-    const x = PAD + col * 558;
-    const y = hallCardsStartY + row * hallRowH;
-
-    return `
-      <g>
-        <rect
-          x="${x}"
-          y="${y}"
-          width="530"
-          height="90"
-          rx="17"
-          fill="${C.surface}"
+        <line
+          x1="${PAD + 35}"
+          y1="${y + 76}"
+          x2="${W - PAD - 28}"
+          y2="${y + 76}"
           stroke="${C.line}"
           stroke-width="2"
         />
 
         <text
-          x="${x + 25}"
-          y="${y + 37}"
-          fill="${C.accent}"
+          x="${PAD + 35}"
+          y="${y + 115}"
+          fill="${C.muted}"
           font-family="Arial, Helvetica, sans-serif"
-          font-size="26"
+          font-size="18"
           font-weight="900"
-        >${esc(shortHall(hall))}</text>
+          letter-spacing="2"
+        >РАСПИСАНИЕ</text>
+    `;
 
+    if (item.schedule.length) {
+      item.schedule.forEach((s, i) => {
+        const rowY =
+          y + 137 + i * 58;
+
+        svg += `
+          <rect
+            x="${PAD + 28}"
+            y="${rowY}"
+            width="${W - PAD * 2 - 56}"
+            height="48"
+            rx="12"
+            fill="${
+              i % 2 === 0
+                ? C.surface2
+                : C.surface
+            }"
+          />
+
+          <text
+            x="${PAD + 48}"
+            y="${rowY + 32}"
+            fill="${C.accent}"
+            font-family="Arial, Helvetica, sans-serif"
+            font-size="22"
+            font-weight="900"
+          >${esc(s.day)}</text>
+
+          <text
+            x="${PAD + 115}"
+            y="${rowY + 32}"
+            fill="${C.text}"
+            font-family="Arial, Helvetica, sans-serif"
+            font-size="22"
+            font-weight="900"
+          >${esc(s.time)}</text>
+
+          <text
+            x="${PAD + 280}"
+            y="${rowY + 32}"
+            fill="${C.text}"
+            font-family="Arial, Helvetica, sans-serif"
+            font-size="21"
+            font-weight="800"
+          >${esc(s.direction)}</text>
+
+          <text
+            x="${W - PAD - 48}"
+            y="${rowY + 32}"
+            text-anchor="end"
+            fill="${C.accent}"
+            font-family="Arial, Helvetica, sans-serif"
+            font-size="20"
+            font-weight="900"
+          >${esc(shortHall(s.hall))}</text>
+        `;
+      });
+    } else {
+      svg += `
         <text
-          x="${x + 25}"
-          y="${y + 69}"
-          fill="${C.text}"
+          x="${PAD + 35}"
+          y="${y + 160}"
+          fill="${C.muted}"
           font-family="Arial, Helvetica, sans-serif"
           font-size="21"
-          font-weight="800"
-        >${esc(hallNames[hall] || "")}</text>
+          font-weight="700"
+        >Расписание пока не добавлено</text>
+      `;
+    }
+
+    svg += `
       </g>
     `;
-  }).join("");
 
-  const contactY =
-    hallCardsStartY +
-    hallRows * hallRowH +
-    60;
+    y += item.height + GAP;
+  });
 
-  const H = Math.max(
-    1754,
-    contactY + 300
-  );
-    // ========================================
-  // СОБИРАЕМ SVG
+  // ========================================
+  // ФУТЕР
   // ========================================
 
-  return `
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="${W}"
-    height="${H}"
-    viewBox="0 0 ${W} ${H}"
-  >
-    <rect width="${W}" height="${H}" fill="${C.bg}" />
+  const footerY = H - 115;
 
-    <!-- Фоновый ТИТАН -->
-    <text
-      x="1210"
-      y="330"
-      text-anchor="end"
-      fill="${C.ghost}"
-      font-family="Arial, Helvetica, sans-serif"
-      font-size="215"
-      font-weight="900"
-    >ТИТАН</text>
+  svg += `
+      <text
+        x="${PAD}"
+        y="${footerY}"
+        fill="${C.muted}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="20"
+        font-weight="800"
+      >г. Сарапул · ул. Советская, 46</text>
 
-    <path
-      d="M970 0 L1240 0 L1240 270 Z"
-      fill="${C.accent}"
-      opacity="${bw ? "0.07" : "0.12"}"
-    />
+      <text
+        x="${W - PAD}"
+        y="${footerY}"
+        text-anchor="end"
+        fill="${C.accent}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="22"
+        font-weight="900"
+      >ТИТАН · САРАПУЛ</text>
 
-    <rect
-      x="0"
-      y="0"
-      width="${W}"
-      height="16"
-      fill="${C.accent}"
-    />
+      <line
+        x1="${PAD}"
+        y1="${footerY + 28}"
+        x2="${W - PAD}"
+        y2="${footerY + 28}"
+        stroke="${C.accent}"
+        stroke-width="6"
+      />
 
-    <!-- ШАПКА -->
-    <text
-      x="${PAD}"
-      y="92"
-      fill="${C.accent}"
-      font-family="Arial, Helvetica, sans-serif"
-      font-size="50"
-      font-weight="900"
-    >ТИТАН</text>
-
-    <text
-      x="${W - PAD}"
-      y="88"
-      text-anchor="end"
-      fill="${C.muted}"
-      font-family="Arial, Helvetica, sans-serif"
-      font-size="21"
-      font-weight="900"
-      letter-spacing="3"
-    >ТРЕНЕР • ${String(trainerNumber).padStart(2, "0")}</text>
-
-    <line
-      x1="${PAD}"
-      y1="125"
-      x2="${W - PAD}"
-      y2="125"
-      stroke="${C.accent}"
-      stroke-width="5"
-    />
-
-    <!-- ИМЯ -->
-    <text
-      x="${PAD}"
-      y="220"
-      fill="${C.text}"
-      font-family="Arial, Helvetica, sans-serif"
-      font-size="61"
-      font-weight="900"
-    >${esc(t.name).toUpperCase()}</text>
-
-    <text
-      x="${PAD + 2}"
-      y="269"
-      fill="${C.muted}"
-      font-family="Arial, Helvetica, sans-serif"
-      font-size="25"
-      font-weight="900"
-      letter-spacing="3"
-    >ГРУППОВЫЕ ТРЕНИРОВКИ</text>
-
-    <!-- 01 НАПРАВЛЕНИЯ -->
-    <text
-      x="${PAD}"
-      y="355"
-      fill="${C.accent}"
-      font-family="Arial, Helvetica, sans-serif"
-      font-size="21"
-      font-weight="900"
-    >01</text>
-
-    <line
-      x1="${PAD + 52}"
-      y1="349"
-      x2="${PAD + 120}"
-      y2="349"
-      stroke="${C.accent}"
-      stroke-width="4"
-    />
-
-    <text
-      x="${PAD + 145}"
-      y="358"
-      fill="${C.text}"
-      font-family="Arial, Helvetica, sans-serif"
-      font-size="32"
-      font-weight="900"
-      letter-spacing="2"
-    >НАПРАВЛЕНИЯ</text>
-
-    ${directionSvg}
-
-    <!-- 02 РАСПИСАНИЕ -->
-    <text
-      x="${PAD}"
-      y="${scheduleTitleY}"
-      fill="${C.accent}"
-      font-family="Arial, Helvetica, sans-serif"
-      font-size="21"
-      font-weight="900"
-    >02</text>
-
-    <line
-      x1="${PAD + 52}"
-      y1="${scheduleTitleY - 7}"
-      x2="${PAD + 120}"
-      y2="${scheduleTitleY - 7}"
-      stroke="${C.accent}"
-      stroke-width="4"
-    />
-
-    <text
-      x="${PAD + 145}"
-      y="${scheduleTitleY + 3}"
-      fill="${C.text}"
-      font-family="Arial, Helvetica, sans-serif"
-      font-size="32"
-      font-weight="900"
-      letter-spacing="2"
-    >РАСПИСАНИЕ</text>
-
-    <!-- ЗАГОЛОВКИ ТАБЛИЦЫ -->
-    <text
-      x="${PAD + 14}"
-      y="${scheduleHeaderY}"
-      fill="${C.muted}"
-      font-family="Arial, Helvetica, sans-serif"
-      font-size="21"
-      font-weight="900"
-    >ДЕНЬ</text>
-
-    <text
-      x="${PAD + 150}"
-      y="${scheduleHeaderY}"
-      fill="${C.muted}"
-      font-family="Arial, Helvetica, sans-serif"
-      font-size="21"
-      font-weight="900"
-    >ВРЕМЯ</text>
-
-    <text
-      x="${PAD + 405}"
-      y="${scheduleHeaderY}"
-      fill="${C.muted}"
-      font-family="Arial, Helvetica, sans-serif"
-      font-size="21"
-      font-weight="900"
-    >НАПРАВЛЕНИЕ</text>
-
-    <text
-      x="${W - PAD - 18}"
-      y="${scheduleHeaderY}"
-      text-anchor="end"
-      fill="${C.muted}"
-      font-family="Arial, Helvetica, sans-serif"
-      font-size="21"
-      font-weight="900"
-    >ЗАЛ</text>
-
-    ${scheduleSvg}
-
-    <!-- 03 ЗАЛЫ -->
-    <text
-      x="${PAD}"
-      y="${hallsTitleY}"
-      fill="${C.accent}"
-      font-family="Arial, Helvetica, sans-serif"
-      font-size="21"
-      font-weight="900"
-    >03</text>
-
-    <line
-      x1="${PAD + 52}"
-      y1="${hallsTitleY - 7}"
-      x2="${PAD + 120}"
-      y2="${hallsTitleY - 7}"
-      stroke="${C.accent}"
-      stroke-width="4"
-    />
-
-    <text
-      x="${PAD + 145}"
-      y="${hallsTitleY + 3}"
-      fill="${C.text}"
-      font-family="Arial, Helvetica, sans-serif"
-      font-size="32"
-      font-weight="900"
-      letter-spacing="2"
-    >РАСШИФРОВКА ЗАЛОВ</text>
-
-    ${hallSvg}
-
-    <!-- КОНТАКТЫ -->
-    <rect
-      x="${PAD}"
-      y="${contactY}"
-      width="${W - PAD * 2}"
-      height="184"
-      rx="23"
-      fill="${C.surface}"
-      stroke="${C.accent}"
-      stroke-width="4"
-    />
-
-    <text
-      x="${PAD + 32}"
-      y="${contactY + 45}"
-      fill="${C.muted}"
-      font-family="Arial, Helvetica, sans-serif"
-      font-size="19"
-      font-weight="900"
-      letter-spacing="2"
-    >ЗАПИСЬ К ТРЕНЕРУ</text>
-
-    <text
-      x="${PAD + 32}"
-      y="${contactY + 106}"
-      fill="${C.text}"
-      font-family="Arial, Helvetica, sans-serif"
-      font-size="40"
-      font-weight="900"
-    >${esc(t.phone)}</text>
-
-    <text
-      x="${PAD + 32}"
-      y="${contactY + 150}"
-      fill="${C.muted}"
-      font-family="Arial, Helvetica, sans-serif"
-      font-size="21"
-      font-weight="800"
-    >г. Сарапул · ул. Советская, 46</text>
-
-    <!-- QR PLACEHOLDER -->
-    <rect
-      x="${W - PAD - 145}"
-      y="${contactY + 24}"
-      width="132"
-      height="132"
-      rx="14"
-      fill="#ffffff"
-      stroke="${C.accent}"
-      stroke-width="4"
-    />
-
-    <text
-      x="${W - PAD - 79}"
-      y="${contactY + 102}"
-      text-anchor="middle"
-      fill="#000000"
-      font-family="Arial, Helvetica, sans-serif"
-      font-size="26"
-      font-weight="900"
-    >QR</text>
-
-    <text
-      x="${PAD}"
-      y="${contactY + 245}"
-      fill="${C.text}"
-      font-family="Arial, Helvetica, sans-serif"
-      font-size="22"
-      font-weight="900"
-      letter-spacing="2"
-    >ТИТАН · САРАПУЛ</text>
-
-    <line
-      x1="${PAD}"
-      y1="${contactY + 272}"
-      x2="${W - PAD}"
-      y2="${contactY + 272}"
-      stroke="${C.accent}"
-      stroke-width="6"
-    />
-  </svg>
+    </svg>
   `;
+
+  return svg;
 }
+    
 // ==========================================
 // ОБЩЕЕ РАСПИСАНИЕ — ДАННЫЕ
 // ==========================================
@@ -2046,17 +1943,42 @@ function makeWeekPoster(rows, theme = "color") {
   `;
 }
 // ==========================================
-// ОТПРАВКА ИНФОГРАФИКИ В TELEGRAM
+// ОТПРАВКА ИНФОГРАФИКИ ТРЕНЕРОВ
 // ==========================================
 
-async function sendPoster(chat, trainerId, theme) {
-  // ==========================================
-// ОТПРАВКА ОБЩЕГО РАСПИСАНИЯ
-// ==========================================
+async function sendMultiTrainerPoster(
+  chat,
+  trainerIds,
+  theme = "color"
+) {
+  const trainers =
+    await getTrainersByIds(trainerIds);
 
-async function sendWeekPoster(chat, theme = "color") {
-  const rows = await getWeekSchedule();
-  const svg = makeWeekPoster(rows, theme);
+  if (!trainers.length) {
+    throw new Error(
+      "Не найдены выбранные тренеры"
+    );
+  }
+
+  if (trainers.length !== trainerIds.length) {
+    throw new Error(
+      "Не удалось загрузить всех выбранных тренеров"
+    );
+  }
+
+  const svg =
+    makeMultiTrainerPoster(
+      trainers,
+      theme
+    );
+
+  const safeNames = trainers
+    .map(t => t.name)
+    .join("_")
+    .replace(/[^\p{L}\p{N}_-]+/gu, "_");
+
+  const filename =
+    `TITAN_${safeNames}_${theme}.svg`;
 
   const form = new FormData();
 
@@ -2069,7 +1991,73 @@ async function sendWeekPoster(chat, theme = "color") {
     "document",
     new Blob(
       [svg],
-      { type: "image/svg+xml" }
+      {
+        type: "image/svg+xml"
+      }
+    ),
+    filename
+  );
+
+  form.append(
+    "caption",
+    `🖼 ТИТАН — инфографика тренеров\n\n` +
+    trainers
+      .map(t => `${t.name} — ${t.phone || "без телефона"}`)
+      .join("\n")
+  );
+
+  const response =
+    await fetch(
+      `${TG}/sendDocument`,
+      {
+        method: "POST",
+        body: form
+      }
+    );
+
+  if (!response.ok) {
+    const body = await response.text();
+
+    throw new Error(
+      `Telegram sendDocument error: ${response.status} ${body}`
+    );
+  }
+
+  return response;
+}
+
+// ==========================================
+// ОТПРАВКА ОБЩЕГО РАСПИСАНИЯ
+// ==========================================
+
+async function sendWeekPoster(
+  chat,
+  theme = "color"
+) {
+  const rows =
+    await getWeekSchedule();
+
+  const svg =
+    makeWeekPoster(
+      rows,
+      theme
+    );
+
+  const form =
+    new FormData();
+
+  form.append(
+    "chat_id",
+    String(chat)
+  );
+
+  form.append(
+    "document",
+    new Blob(
+      [svg],
+      {
+        type: "image/svg+xml"
+      }
     ),
     "titan-week-schedule.svg"
   );
@@ -2077,63 +2065,28 @@ async function sendWeekPoster(chat, theme = "color") {
   form.append(
     "caption",
     theme === "bw"
-      ? "📅 Общее расписание «ТИТАН» — ч/б версия"
+      ? "📅 Общее расписание «ТИТАН» — Ч/Б"
       : "📅 Общее расписание «ТИТАН»"
   );
 
-  await fetch(
-    `${TG}/sendDocument`,
-    {
-      method: "POST",
-      body: form
-    }
-  );
-}
-  const trainer = await getTrainer(trainerId);
+  const response =
+    await fetch(
+      `${TG}/sendDocument`,
+      {
+        method: "POST",
+        body: form
+      }
+    );
 
-  if (!trainer) {
-    return sendMessage(chat, "Тренер не найден.");
+  if (!response.ok) {
+    const body = await response.text();
+
+    throw new Error(
+      `Telegram sendDocument error: ${response.status} ${body}`
+    );
   }
 
-  const trainers = await getTrainers();
-
-  const number =
-    trainers.findIndex(
-      t => Number(t.id) === Number(trainerId)
-    ) + 1;
-
-  const svg = makePoster(
-    trainer,
-    theme,
-    number || 1
-  );
-
-  const form = new FormData();
-
-  form.append("chat_id", String(chat));
-
-  form.append(
-    "document",
-    new Blob(
-      [svg],
-      { type: "image/svg+xml" }
-    ),
-    `TITAN_${trainer.name.replace(/\s+/g, "_")}_${theme}.svg`
-  );
-
-  form.append(
-    "caption",
-    `${trainer.name}\n${
-      theme === "bw"
-        ? "Ч/Б вариант"
-        : "Цветной вариант"
-    }`
-  );
-
-  return fetch(`${TG}/sendDocument`, {
-    method: "POST",
-    body: form
-  });
+  return response;
 }
 // ==========================================
 // ОСНОВНОЙ WEBHOOK
@@ -2162,7 +2115,6 @@ module.exports = async (req, res) => {
       return res.status(200).json({ ok: true });
     }
 
-    // Закрываем "часики" на Telegram-кнопке
     if (query) {
       await api("answerCallbackQuery", {
         callback_query_id: query.id
@@ -2173,10 +2125,13 @@ module.exports = async (req, res) => {
     const text = message?.text || "";
 
     // ========================================
-    // /START И ГЛАВНОЕ МЕНЮ
+    // ГЛАВНОЕ МЕНЮ
     // ========================================
 
-    if (text === "/start" || data === "home") {
+    if (
+      text === "/start" ||
+      data === "home"
+    ) {
       await clearState(chat);
 
       await sendMessage(
@@ -2185,46 +2140,60 @@ module.exports = async (req, res) => {
         mainKeyboard()
       );
 
-      return res.status(200).json({ ok: true });
+      return res.status(200).json({
+        ok: true
+      });
     }
 
     // ========================================
-    // ТЕКСТ, КОТОРЫЙ ВВОДИТ АДМИНИСТРАТОР
+    // ТЕКСТОВЫЙ ВВОД
     // ========================================
 
     if (message && text) {
       const directionProcessed =
-        await processDirectionState(chat, text);
+        await processDirectionState(
+          chat,
+          text
+        );
 
       if (directionProcessed) {
-        return res.status(200).json({ ok: true });
+        return res.status(200).json({
+          ok: true
+        });
       }
 
       const processed =
-        await processStateMessage(chat, text);
+        await processStateMessage(
+          chat,
+          text
+        );
 
       if (processed) {
-        return res.status(200).json({ ok: true });
+        return res.status(200).json({
+          ok: true
+        });
       }
     }
 
     // ========================================
-    // СОЗДАНИЕ ИНФОГРАФИКИ
+    // СОЗДАТЬ ИНФОГРАФИКУ
     // ========================================
 
     if (data === "create") {
       await sendMessage(
         chat,
-        "Выберите вариант оформления:",
+        "🖼 ТИТАН — ГЕНЕРАТОР ИНФОГРАФИКИ\n\nВыберите, что создать:",
         [
           [
             {
-              text: "🟧 Цветной",
-              callback_data: "theme:color"
-            },
+              text: "👤 Тренеры",
+              callback_data: "trainer_poster_menu"
+            }
+          ],
+          [
             {
-              text: "⬜ Ч/Б",
-              callback_data: "theme:bw"
+              text: "📅 Общее расписание",
+              callback_data: "week"
             }
           ],
           [
@@ -2236,58 +2205,329 @@ module.exports = async (req, res) => {
         ]
       );
 
-      return res.status(200).json({ ok: true });
-    }
-
-    if (data.startsWith("theme:")) {
-      const theme = data.split(":")[1];
-
-      const keyboard =
-        await trainerKeyboard(`poster_${theme}`);
-
-      await sendMessage(
-        chat,
-        "Выберите тренера:",
-        keyboard
-      );
-
-      return res.status(200).json({ ok: true });
+      return res.status(200).json({
+        ok: true
+      });
     }
 
     // ========================================
-    // ГЕНЕРАЦИЯ ПОСТЕРА
+    // ИНФОГРАФИКА ТРЕНЕРОВ
     // ========================================
 
-    if (
-      data.startsWith("poster_color:") ||
-      data.startsWith("poster_bw:")
-    ) {
-      const [prefix, id] = data.split(":");
-
-      const theme =
-        prefix === "poster_bw"
-          ? "bw"
-          : "color";
+    if (data === "trainer_poster_menu") {
+      await clearState(chat);
 
       await sendMessage(
         chat,
-        "Готовлю инфографику…"
-      );
-
-      await sendPoster(
-        chat,
-        Number(id),
-        theme
-      );
-
-      await sendMessage(
-        chat,
-        "✅ Готово.",
+        "👤 ИНФОГРАФИКА ТРЕНЕРОВ\n\nВыберите количество тренеров:",
         [
           [
             {
-              text: "👤 Другой тренер",
-              callback_data: `theme:${theme}`
+              text: "1️⃣ Один тренер",
+              callback_data: "poster_count:1"
+            }
+          ],
+          [
+            {
+              text: "2️⃣ Два тренера",
+              callback_data: "poster_count:2"
+            }
+          ],
+          [
+            {
+              text: "3️⃣ Три тренера",
+              callback_data: "poster_count:3"
+            }
+          ],
+          [
+            {
+              text: "⬅️ Назад",
+              callback_data: "create"
+            }
+          ]
+        ]
+      );
+
+      return res.status(200).json({
+        ok: true
+      });
+    }
+
+    if (data.startsWith("poster_count:")) {
+      const count =
+        Number(data.split(":")[1]);
+
+      if (![1, 2, 3].includes(count)) {
+        return res.status(200).json({
+          ok: true
+        });
+      }
+
+      await setState(
+        chat,
+        "poster_select_trainers",
+        null,
+        null,
+        {
+          count,
+          selectedIds: []
+        }
+      );
+
+      const keyboard =
+        await trainerSelectionKeyboard(
+          "poster_select",
+          []
+        );
+
+      keyboard.push([
+        {
+          text: "⬅️ Назад",
+          callback_data: "trainer_poster_menu"
+        }
+      ]);
+
+      await sendMessage(
+        chat,
+        `Выберите тренера №1 из ${count}:`,
+        keyboard
+      );
+
+      return res.status(200).json({
+        ok: true
+      });
+    }
+
+    if (data.startsWith("poster_select:")) {
+      const trainerId =
+        Number(data.split(":")[1]);
+
+      const state =
+        await getState(chat);
+
+      if (
+        !state ||
+        state.action !==
+          "poster_select_trainers"
+      ) {
+        return res.status(200).json({
+          ok: true
+        });
+      }
+
+      const info =
+        state.data || {};
+
+      const count =
+        Number(info.count || 1);
+
+      let selectedIds =
+        Array.isArray(info.selectedIds)
+          ? info.selectedIds.map(Number)
+          : [];
+
+      if (
+        selectedIds.includes(trainerId)
+      ) {
+        selectedIds =
+          selectedIds.filter(
+            id => id !== trainerId
+          );
+      } else {
+        if (
+          selectedIds.length >= count
+        ) {
+          return res.status(200).json({
+            ok: true
+          });
+        }
+
+        selectedIds.push(trainerId);
+      }
+
+      await setState(
+        chat,
+        "poster_select_trainers",
+        null,
+        null,
+        {
+          count,
+          selectedIds
+        }
+      );
+
+      const keyboard =
+        await trainerSelectionKeyboard(
+          "poster_select",
+          selectedIds
+        );
+
+      if (
+        selectedIds.length === count
+      ) {
+        keyboard.push([
+          {
+            text: "✅ Продолжить",
+            callback_data: "poster_theme"
+          }
+        ]);
+      }
+
+      keyboard.push([
+        {
+          text: "⬅️ Назад",
+          callback_data: "trainer_poster_menu"
+        }
+      ]);
+
+      await sendMessage(
+        chat,
+        `Выбрано: ${selectedIds.length} из ${count}`,
+        keyboard
+      );
+
+      return res.status(200).json({
+        ok: true
+      });
+    }
+
+    if (data === "poster_theme") {
+      const state =
+        await getState(chat);
+
+      if (
+        !state ||
+        state.action !==
+          "poster_select_trainers"
+      ) {
+        return res.status(200).json({
+          ok: true
+        });
+      }
+
+      await sendMessage(
+        chat,
+        "Выберите вариант оформления:",
+        [
+          [
+            {
+              text: "🟧 Цветной",
+              callback_data:
+                "poster_generate:color"
+            },
+            {
+              text: "⬜ Ч/Б",
+              callback_data:
+                "poster_generate:bw"
+            }
+          ],
+          [
+            {
+              text: "⬅️ Назад",
+              callback_data:
+                "trainer_poster_menu"
+            }
+          ]
+        ]
+      );
+
+      return res.status(200).json({
+        ok: true
+      });
+    }
+
+    if (
+      data.startsWith(
+        "poster_generate:"
+      )
+    ) {
+      const theme =
+        data.split(":")[1];
+
+      if (
+        theme !== "color" &&
+        theme !== "bw"
+      ) {
+        return res.status(200).json({
+          ok: true
+        });
+      }
+
+      const state =
+        await getState(chat);
+
+      if (
+        !state ||
+        state.action !==
+          "poster_select_trainers"
+      ) {
+        await sendMessage(
+          chat,
+          "⚠️ Выбор тренеров потерян. Начните заново."
+        );
+
+        return res.status(200).json({
+          ok: true
+        });
+      }
+
+      const info =
+        state.data || {};
+
+      const selectedIds =
+        Array.isArray(
+          info.selectedIds
+        )
+          ? info.selectedIds
+              .map(Number)
+              .filter(Boolean)
+          : [];
+
+      const count =
+        Number(info.count || 0);
+
+      if (
+        ![1, 2, 3].includes(count) ||
+        selectedIds.length !== count
+      ) {
+        await sendMessage(
+          chat,
+          "⚠️ Выберите нужное количество тренеров."
+        );
+
+        return res.status(200).json({
+          ok: true
+        });
+      }
+
+      await sendMessage(
+        chat,
+        "⏳ Готовлю инфографику…"
+      );
+
+      await sendMultiTrainerPoster(
+        chat,
+        selectedIds,
+        theme
+      );
+
+      await clearState(chat);
+
+      await sendMessage(
+        chat,
+        "✅ Инфографика готова.",
+        [
+          [
+            {
+              text: "👤 Другие тренеры",
+              callback_data:
+                "trainer_poster_menu"
+            }
+          ],
+          [
+            {
+              text: "📅 Общее расписание",
+              callback_data: "week"
             }
           ],
           [
@@ -2299,7 +2539,9 @@ module.exports = async (req, res) => {
         ]
       );
 
-      return res.status(200).json({ ok: true });
+      return res.status(200).json({
+        ok: true
+      });
     }
 
     // ========================================
@@ -2307,14 +2549,16 @@ module.exports = async (req, res) => {
     // ========================================
 
     if (data === "trainers") {
-      const trainers = await getTrainers();
+      const trainers =
+        await getTrainers();
 
-      const list = trainers
-        .map(
-          (t, i) =>
-            `${i + 1}. ${t.name} — ${t.phone}`
-        )
-        .join("\n");
+      const list =
+        trainers
+          .map(
+            (t, i) =>
+              `${i + 1}. ${t.name} — ${t.phone || "без телефона"}`
+          )
+          .join("\n");
 
       await sendMessage(
         chat,
@@ -2329,22 +2573,28 @@ module.exports = async (req, res) => {
         ]
       );
 
-      return res.status(200).json({ ok: true });
+      return res.status(200).json({
+        ok: true
+      });
     }
 
     // ========================================
-    // ВХОД В УПРАВЛЕНИЕ
+    // АДМИН-МЕНЮ
     // ========================================
 
     if (data === "admin") {
       await showAdmin(chat);
 
-      return res.status(200).json({ ok: true });
+      return res.status(200).json({
+        ok: true
+      });
     }
 
     if (data === "admin_trainers") {
       const keyboard =
-        await trainerKeyboard("admin_trainer");
+        await trainerKeyboard(
+          "admin_trainer"
+        );
 
       await sendMessage(
         chat,
@@ -2352,68 +2602,124 @@ module.exports = async (req, res) => {
         keyboard
       );
 
-      return res.status(200).json({ ok: true });
+      return res.status(200).json({
+        ok: true
+      });
     }
 
-    if (data.startsWith("admin_trainer:")) {
-      const id = Number(data.split(":")[1]);
+    if (
+      data.startsWith(
+        "admin_trainer:"
+      )
+    ) {
+      const id =
+        Number(data.split(":")[1]);
 
-      await showTrainerAdmin(chat, id);
+      await showTrainerAdmin(
+        chat,
+        id
+      );
 
-      return res.status(200).json({ ok: true });
+      return res.status(200).json({
+        ok: true
+      });
     }
 
     // ========================================
-    // РАСПИСАНИЕ
+    // РАСПИСАНИЕ ТРЕНЕРА
     // ========================================
 
-    if (data.startsWith("admin_schedule:")) {
-      const id = Number(data.split(":")[1]);
+    if (
+      data.startsWith(
+        "admin_schedule:"
+      )
+    ) {
+      const id =
+        Number(data.split(":")[1]);
 
-      await showScheduleAdmin(chat, id);
+      await showScheduleAdmin(
+        chat,
+        id
+      );
 
-      return res.status(200).json({ ok: true });
+      return res.status(200).json({
+        ok: true
+      });
     }
 
-    if (data.startsWith("lesson:")) {
-      const id = Number(data.split(":")[1]);
+    if (
+      data.startsWith("lesson:")
+    ) {
+      const id =
+        Number(data.split(":")[1]);
 
-      await showLessonAdmin(chat, id);
+      await showLessonAdmin(
+        chat,
+        id
+      );
 
-      return res.status(200).json({ ok: true });
+      return res.status(200).json({
+        ok: true
+      });
     }
-        // ========================================
-    // ИЗМЕНЕНИЕ ЗАНЯТИЯ
-    // ========================================
 
-    if (data.startsWith("lesson_day:")) {
-      const id = Number(data.split(":")[1]);
+    if (
+      data.startsWith(
+        "lesson_day:"
+      )
+    ) {
+      const id =
+        Number(data.split(":")[1]);
 
-      await setState(chat, "lesson_day", null, id);
+      await setState(
+        chat,
+        "lesson_day",
+        null,
+        id
+      );
 
       await sendMessage(
         chat,
         "Введите новый день.\nНапример: ПН, ВТ, СР, ЧТ, ПТ, СБ или ВС"
       );
 
-      return res.status(200).json({ ok: true });
+      return res.status(200).json({
+        ok: true
+      });
     }
 
-    if (data.startsWith("lesson_time:")) {
-      const id = Number(data.split(":")[1]);
+    if (
+      data.startsWith(
+        "lesson_time:"
+      )
+    ) {
+      const id =
+        Number(data.split(":")[1]);
 
-      await setState(chat, "lesson_time", null, id);
+      await setState(
+        chat,
+        "lesson_time",
+        null,
+        id
+      );
 
       await sendMessage(
         chat,
         "Введите новое время.\nНапример: 18:30"
       );
 
-      return res.status(200).json({ ok: true });
+      return res.status(200).json({
+        ok: true
+      });
     }
 
-    if (data.startsWith("lesson_direction:")) {
-      const id = Number(data.split(":")[1]);
+    if (
+      data.startsWith(
+        "lesson_direction:"
+      )
+    ) {
+      const id =
+        Number(data.split(":")[1]);
 
       await setState(
         chat,
@@ -2427,43 +2733,65 @@ module.exports = async (req, res) => {
         "Введите новое название направления:"
       );
 
-      return res.status(200).json({ ok: true });
+      return res.status(200).json({
+        ok: true
+      });
     }
 
-    if (data.startsWith("lesson_hall:")) {
-      const id = Number(data.split(":")[1]);
+    if (
+      data.startsWith(
+        "lesson_hall:"
+      )
+    ) {
+      const id =
+        Number(data.split(":")[1]);
 
-      await setState(chat, "lesson_hall", null, id);
+      await setState(
+        chat,
+        "lesson_hall",
+        null,
+        id
+      );
 
       await sendMessage(
         chat,
         "Введите номер зала: 1, 2, 3 или 5.\nДля тренажёрного зала напишите: Тренажерный зал"
       );
 
-      return res.status(200).json({ ok: true });
+      return res.status(200).json({
+        ok: true
+      });
     }
 
-    // ========================================
-    // УДАЛЕНИЕ ЗАНЯТИЯ
-    // ========================================
+    if (
+      data.startsWith(
+        "lesson_delete:"
+      )
+    ) {
+      const id =
+        Number(data.split(":")[1]);
 
-    if (data.startsWith("lesson_delete:")) {
-      const id = Number(data.split(":")[1]);
-
-      const rows = await sql`
-        SELECT trainer_id
-        FROM schedule
-        WHERE id = ${id}
-        LIMIT 1
-      `;
+      const rows =
+        await sql`
+          SELECT trainer_id
+          FROM schedule
+          WHERE id = ${id}
+          LIMIT 1
+        `;
 
       if (!rows.length) {
-        await sendMessage(chat, "Занятие уже удалено.");
+        await sendMessage(
+          chat,
+          "Занятие уже удалено."
+        );
 
-        return res.status(200).json({ ok: true });
+        return res.status(200).json({
+          ok: true
+        });
       }
 
-      const trainerId = rows[0].trainer_id;
+      const trainerId =
+        rows[0].trainer_id;
 
       await sql`
         DELETE FROM schedule
@@ -2480,14 +2808,16 @@ module.exports = async (req, res) => {
         trainerId
       );
 
-      return res.status(200).json({ ok: true });
+      return res.status(200).json({
+        ok: true
+      });
     }
 
-    // ========================================
-    // ДОБАВЛЕНИЕ ЗАНЯТИЯ
-    // ========================================
-
-    if (data.startsWith("add_lesson:")) {
+    if (
+      data.startsWith(
+        "add_lesson:"
+      )
+    ) {
       const trainerId =
         Number(data.split(":")[1]);
 
@@ -2502,15 +2832,22 @@ module.exports = async (req, res) => {
         "Введите день нового занятия.\nНапример: СР"
       );
 
-      return res.status(200).json({ ok: true });
+      return res.status(200).json({
+        ok: true
+      });
     }
 
     // ========================================
-    // ИЗМЕНЕНИЕ ИМЕНИ И ТЕЛЕФОНА
+    // ИМЯ / ТЕЛЕФОН / НОВЫЙ ТРЕНЕР
     // ========================================
 
-    if (data.startsWith("edit_name:")) {
-      const id = Number(data.split(":")[1]);
+    if (
+      data.startsWith(
+        "edit_name:"
+      )
+    ) {
+      const id =
+        Number(data.split(":")[1]);
 
       await setState(
         chat,
@@ -2523,11 +2860,18 @@ module.exports = async (req, res) => {
         "Введите новое имя тренера:"
       );
 
-      return res.status(200).json({ ok: true });
+      return res.status(200).json({
+        ok: true
+      });
     }
 
-    if (data.startsWith("edit_phone:")) {
-      const id = Number(data.split(":")[1]);
+    if (
+      data.startsWith(
+        "edit_phone:"
+      )
+    ) {
+      const id =
+        Number(data.split(":")[1]);
 
       await setState(
         chat,
@@ -2540,12 +2884,10 @@ module.exports = async (req, res) => {
         "Введите новый номер телефона:"
       );
 
-      return res.status(200).json({ ok: true });
+      return res.status(200).json({
+        ok: true
+      });
     }
-
-    // ========================================
-    // ДОБАВЛЕНИЕ ТРЕНЕРА
-    // ========================================
 
     if (data === "add_trainer") {
       await setState(
@@ -2558,14 +2900,20 @@ module.exports = async (req, res) => {
         "Введите имя и фамилию нового тренера:"
       );
 
-      return res.status(200).json({ ok: true });
+      return res.status(200).json({
+        ok: true
+      });
     }
 
     // ========================================
     // НАПРАВЛЕНИЯ
     // ========================================
 
-    if (data.startsWith("admin_directions:")) {
+    if (
+      data.startsWith(
+        "admin_directions:"
+      )
+    ) {
       const trainerId =
         Number(data.split(":")[1]);
 
@@ -2574,10 +2922,16 @@ module.exports = async (req, res) => {
         trainerId
       );
 
-      return res.status(200).json({ ok: true });
+      return res.status(200).json({
+        ok: true
+      });
     }
 
-    if (data.startsWith("direction:")) {
+    if (
+      data.startsWith(
+        "direction:"
+      )
+    ) {
       const directionId =
         Number(data.split(":")[1]);
 
@@ -2586,10 +2940,16 @@ module.exports = async (req, res) => {
         directionId
       );
 
-      return res.status(200).json({ ok: true });
+      return res.status(200).json({
+        ok: true
+      });
     }
 
-    if (data.startsWith("direction_name:")) {
+    if (
+      data.startsWith(
+        "direction_name:"
+      )
+    ) {
       const directionId =
         Number(data.split(":")[1]);
 
@@ -2605,10 +2965,16 @@ module.exports = async (req, res) => {
         "Введите новое название направления:"
       );
 
-      return res.status(200).json({ ok: true });
+      return res.status(200).json({
+        ok: true
+      });
     }
 
-    if (data.startsWith("direction_desc:")) {
+    if (
+      data.startsWith(
+        "direction_desc:"
+      )
+    ) {
       const directionId =
         Number(data.split(":")[1]);
 
@@ -2624,23 +2990,26 @@ module.exports = async (req, res) => {
         "Введите новое описание направления:"
       );
 
-      return res.status(200).json({ ok: true });
+      return res.status(200).json({
+        ok: true
+      });
     }
 
-    // ========================================
-    // УДАЛЕНИЕ НАПРАВЛЕНИЯ
-    // ========================================
-
-    if (data.startsWith("direction_delete:")) {
+    if (
+      data.startsWith(
+        "direction_delete:"
+      )
+    ) {
       const directionId =
         Number(data.split(":")[1]);
 
-      const rows = await sql`
-        SELECT trainer_id
-        FROM directions
-        WHERE id = ${directionId}
-        LIMIT 1
-      `;
+      const rows =
+        await sql`
+          SELECT trainer_id
+          FROM directions
+          WHERE id = ${directionId}
+          LIMIT 1
+        `;
 
       if (!rows.length) {
         await sendMessage(
@@ -2648,7 +3017,9 @@ module.exports = async (req, res) => {
           "Направление уже удалено."
         );
 
-        return res.status(200).json({ ok: true });
+        return res.status(200).json({
+          ok: true
+        });
       }
 
       const trainerId =
@@ -2669,14 +3040,16 @@ module.exports = async (req, res) => {
         trainerId
       );
 
-      return res.status(200).json({ ok: true });
+      return res.status(200).json({
+        ok: true
+      });
     }
 
-    // ========================================
-    // ДОБАВЛЕНИЕ НАПРАВЛЕНИЯ
-    // ========================================
-
-    if (data.startsWith("add_direction:")) {
+    if (
+      data.startsWith(
+        "add_direction:"
+      )
+    ) {
       const trainerId =
         Number(data.split(":")[1]);
 
@@ -2691,82 +3064,127 @@ module.exports = async (req, res) => {
         "Введите название нового направления:"
       );
 
-      return res.status(200).json({ ok: true });
+      return res.status(200).json({
+        ok: true
+      });
     }
 
     // ========================================
     // ОБЩЕЕ РАСПИСАНИЕ
     // ========================================
+
     if (data === "week") {
-  await sendMessage(
-    chat,
-    "📅 Выберите вариант общего расписания:",
-    [
-      [
-        {
-          text: "🟧 Цветное",
-          callback_data: "week_color"
-        },
-        {
-          text: "⬜ Ч/Б",
-          callback_data: "week_bw"
-        }
-      ],
-      [
-        {
-          text: "🏠 В меню",
-          callback_data: "home"
-        }
-      ]
-    ]
-  );
+      await sendMessage(
+        chat,
+        "📅 Выберите вариант общего расписания:",
+        [
+          [
+            {
+              text: "🟧 Цветное",
+              callback_data:
+                "week_color"
+            },
+            {
+              text: "⬜ Ч/Б",
+              callback_data:
+                "week_bw"
+            }
+          ],
+          [
+            {
+              text: "🏠 В меню",
+              callback_data: "home"
+            }
+          ]
+        ]
+      );
 
-  return res.status(200).json({ ok: true });
-}
-
-if (data === "week_color") {
-  await sendWeekPoster(chat, "color");
-
-  await sendMessage(
-    chat,
-    "✅ Общее расписание готово.",
-    [
-      [
-        {
-          text: "🏠 В меню",
-          callback_data: "home"
-        }
-      ]
-    ]
-  );
-
-  return res.status(200).json({ ok: true });
-}
-
-if (data === "week_bw") {
-  await sendWeekPoster(chat, "bw");
-
-  await sendMessage(
-    chat,
-    "✅ Общее расписание готово.",
-    [
-      [
-        {
-          text: "🏠 В меню",
-          callback_data: "home"
-        }
-      ]
-    ]
-  );
-
-    return res.status(200).json({ ok: true });
-}
-} catch (error) {
-  console.error("WEBHOOK ERROR:", error);
-
-  return res.status(500).json({
-    ok: false,
-    error: "Internal server error"
-  });
+      return res.status(200).json({
+        ok: true
+      });
     }
-}
+
+    if (data === "week_color") {
+      await sendMessage(
+        chat,
+        "⏳ Готовлю общее расписание…"
+      );
+
+      await sendWeekPoster(
+        chat,
+        "color"
+      );
+
+      await sendMessage(
+        chat,
+        "✅ Общее расписание готово.",
+        [
+          [
+            {
+              text: "🏠 В меню",
+              callback_data: "home"
+            }
+          ]
+        ]
+      );
+
+      return res.status(200).json({
+        ok: true
+      });
+    }
+
+    if (data === "week_bw") {
+      await sendMessage(
+        chat,
+        "⏳ Готовлю общее расписание…"
+      );
+
+      await sendWeekPoster(
+        chat,
+        "bw"
+      );
+
+      await sendMessage(
+        chat,
+        "✅ Общее расписание готово.",
+        [
+          [
+            {
+              text: "🏠 В меню",
+              callback_data: "home"
+            }
+          ]
+        ]
+      );
+
+      return res.status(200).json({
+        ok: true
+      });
+    }
+
+    // ========================================
+    // НЕИЗВЕСТНАЯ КНОПКА
+    // ========================================
+
+    await sendMessage(
+      chat,
+      "Выберите действие:",
+      mainKeyboard()
+    );
+
+    return res.status(200).json({
+      ok: true
+    });
+
+  } catch (error) {
+    console.error(
+      "WEBHOOK ERROR:",
+      error
+    );
+
+    return res.status(500).json({
+      ok: false,
+      error: "Internal server error"
+    });
+  }
+};
