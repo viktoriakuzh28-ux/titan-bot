@@ -1440,13 +1440,13 @@ function makePoster(t, theme = "color", trainerNumber = 1) {
 
   const scheduleTitleY = dirY + 40;
   const scheduleTopY = scheduleTitleY + 44;
-  const scheduleHeadY = scheduleTopY + 48;
+  const scheduleHeadY = scheduleTopY + 26;
 
   const rowH =
-    lessons.length <= 2 ? 108 :
-    lessons.length <= 4 ? 92 :
-    lessons.length <= 6 ? 80 :
-    72;
+  lessons.length <= 2 ? 138 :
+  lessons.length <= 4 ? 118 :
+  lessons.length <= 6 ? 94 :
+  82;
 
   const scheduleStartY = scheduleHeadY + 18;
 
@@ -1549,7 +1549,10 @@ function makePoster(t, theme = "color", trainerNumber = 1) {
     "GYM": "ТРЕНАЖЁРНЫЙ ЗАЛ"
   };
 
-  const legendY = scheduleBottomY + 70;
+  const legendY = Math.max(
+  scheduleBottomY + 95,
+  1210
+);
 
   const legendSvg = legendKeys.map((hall, i) => {
     const col = i % 2;
