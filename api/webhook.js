@@ -118,7 +118,7 @@ async function initDatabase() {
 }
 
 // ==========================================
-// СТАРТОВЫЕ ТРЕНЕРЫ
+// СТАРТОВЫЕ ДАННЫЕ
 // ==========================================
 
 async function seedDatabase() {
@@ -130,39 +130,19 @@ async function seedDatabase() {
       directions: [
         [
           "Хатха-йога",
-          "Спокойная практика: гибкость, укрепление тела и снятие стресса."
+          "Гибкость, укрепление тела, контроль дыхания и снятие напряжения."
         ],
         [
           "Йога в гамаках",
-          "Практика в гамаках: мобильность, разгрузка и контроль тела."
+          "Практика в гамаках: мобильность, разгрузка позвоночника и контроль тела."
         ]
       ],
 
       schedule: [
-        [
-          "СР",
-          "07:30",
-          "Хатха-йога",
-          "5"
-        ],
-        [
-          "СР",
-          "09:00",
-          "Йога в гамаках",
-          "2"
-        ],
-        [
-          "ПТ",
-          "07:30",
-          "Хатха-йога",
-          "5"
-        ],
-        [
-          "ПТ",
-          "09:00",
-          "Йога в гамаках",
-          "2"
-        ]
+        ["СР", "07:30", "Хатха-йога", "5"],
+        ["СР", "09:00", "Йога в гамаках", "2"],
+        ["ПТ", "07:30", "Хатха-йога", "5"],
+        ["ПТ", "09:00", "Йога в гамаках", "2"]
       ]
     },
 
@@ -172,18 +152,13 @@ async function seedDatabase() {
 
       directions: [
         [
-          "Кундалини-йога",
-          "Практика для развития осознанности и гармонизации тела и ума."
+          "Йога",
+          "Практика для развития гибкости, мобильности, дыхания и внутреннего баланса."
         ]
       ],
 
       schedule: [
-        [
-          "СБ",
-          "08:00",
-          "Кундалини-йога",
-          "5"
-        ]
+        ["СБ", "08:00", "Йога / аэройога", "5"]
       ]
     },
 
@@ -193,24 +168,14 @@ async function seedDatabase() {
 
       directions: [
         [
-          "Кундалини-йога",
-          "Практика для развития осознанности и гармонизации тела и ума."
+          "Йога",
+          "Практика для гибкости, восстановления, осознанности и улучшения самочувствия."
         ]
       ],
 
       schedule: [
-        [
-          "ПН",
-          "09:00",
-          "Кундалини-йога",
-          "5"
-        ],
-        [
-          "ВС",
-          "15:00–19:00",
-          "Кундалини-йога",
-          "2"
-        ]
+        ["ПН", "09:00", "Йога", "5"],
+        ["ВС", "15:00–19:00", "Йога", "2"]
       ]
     },
 
@@ -242,100 +207,25 @@ async function seedDatabase() {
       ],
 
       schedule: [
-        [
-          "ПН",
-          "17:00",
-          "TRX",
-          "2"
-        ],
-        [
-          "ПН",
-          "18:00",
-          "Силовой фитнес",
-          "3"
-        ],
-        [
-          "ПН",
-          "19:00",
-          "Растяжка",
-          "3"
-        ],
-        [
-          "ПН",
-          "20:00",
-          "Фитнес-йога",
-          "2"
-        ],
+        ["ПН", "17:00", "TRX", "2"],
+        ["ПН", "18:00", "Силовой фитнес", "3"],
+        ["ПН", "19:00", "Растяжка", "3"],
+        ["ПН", "20:00", "Фитнес-йога", "2"],
 
-        [
-          "ВТ",
-          "09:00",
-          "Силовой фитнес",
-          "3"
-        ],
-        [
-          "ВТ",
-          "10:00",
-          "Мышечно-суставная гимнастика",
-          "2"
-        ],
+        ["ВТ", "09:00", "Силовой фитнес", "3"],
+        ["ВТ", "10:00", "Мышечно-суставная гимнастика", "2"],
 
-        [
-          "СР",
-          "17:00",
-          "Силовой фитнес",
-          "3"
-        ],
-        [
-          "СР",
-          "18:00",
-          "Силовой фитнес",
-          "3"
-        ],
-        [
-          "СР",
-          "19:00",
-          "TRX",
-          "2"
-        ],
-        [
-          "СР",
-          "20:00",
-          "Фитнес-йога",
-          "2"
-        ],
+        ["СР", "17:00", "Силовой фитнес", "3"],
+        ["СР", "18:00", "Силовой фитнес", "3"],
+        ["СР", "19:00", "TRX", "2"],
+        ["СР", "20:00", "Фитнес-йога", "2"],
 
-        [
-          "ЧТ",
-          "09:00",
-          "Силовой фитнес",
-          "3"
-        ],
-        [
-          "ЧТ",
-          "10:00",
-          "Растяжка",
-          "2"
-        ],
+        ["ЧТ", "09:00", "Силовой фитнес", "3"],
+        ["ЧТ", "10:00", "Растяжка", "2"],
 
-        [
-          "ПТ",
-          "17:00",
-          "Растяжка",
-          "2"
-        ],
-        [
-          "ПТ",
-          "18:00",
-          "TRX",
-          "2"
-        ],
-        [
-          "ПТ",
-          "19:00",
-          "Растяжка",
-          "2"
-        ]
+        ["ПТ", "17:00", "Растяжка", "2"],
+        ["ПТ", "18:00", "TRX", "2"],
+        ["ПТ", "19:00", "Растяжка", "2"]
       ]
     },
 
@@ -363,76 +253,21 @@ async function seedDatabase() {
       ],
 
       schedule: [
-        [
-          "ПН",
-          "11:00",
-          "Силовой тренинг",
-          "3"
-        ],
-        [
-          "ПН",
-          "18:30",
-          "Кроссфит",
-          "1"
-        ],
+        ["ПН", "11:00", "Силовой тренинг", "3"],
+        ["ПН", "18:30", "Кроссфит", "1"],
 
-        [
-          "ВТ",
-          "10:00",
-          "Функционал",
-          "3"
-        ],
-        [
-          "ВТ",
-          "19:00",
-          "Силовой тренинг",
-          "3"
-        ],
-        [
-          "ВТ",
-          "20:00",
-          "Тренажерный зал",
-          "GYM"
-        ],
+        ["ВТ", "10:00", "Функционал", "3"],
+        ["ВТ", "19:00", "Силовой тренинг", "3"],
+        ["ВТ", "20:00", "Тренажерный зал", "GYM"],
 
-        [
-          "СР",
-          "10:00",
-          "Силовой тренинг",
-          "3"
-        ],
+        ["СР", "10:00", "Силовой тренинг", "3"],
 
-        [
-          "ЧТ",
-          "10:00",
-          "Функционал",
-          "3"
-        ],
-        [
-          "ЧТ",
-          "19:00",
-          "Силовой тренинг",
-          "3"
-        ],
-        [
-          "ЧТ",
-          "20:00",
-          "Тренажерный зал",
-          "GYM"
-        ],
+        ["ЧТ", "10:00", "Функционал", "3"],
+        ["ЧТ", "19:00", "Силовой тренинг", "3"],
+        ["ЧТ", "20:00", "Тренажерный зал", "GYM"],
 
-        [
-          "ПТ",
-          "10:00",
-          "Кроссфит",
-          "1"
-        ],
-        [
-          "СБ",
-          "09:00",
-          "Кроссфит",
-          "1"
-        ]
+        ["ПТ", "10:00", "Кроссфит", "1"],
+        ["СБ", "09:00", "Кроссфит", "1"]
       ]
     },
 
@@ -448,24 +283,9 @@ async function seedDatabase() {
       ],
 
       schedule: [
-        [
-          "ВТ",
-          "19:00",
-          "Динамическая растяжка",
-          "5"
-        ],
-        [
-          "ЧТ",
-          "19:00",
-          "Динамическая растяжка",
-          "5"
-        ],
-        [
-          "ВС",
-          "11:00",
-          "Динамическая растяжка",
-          "5"
-        ]
+        ["ВТ", "19:00", "Динамическая растяжка", "5"],
+        ["ЧТ", "19:00", "Динамическая растяжка", "5"],
+        ["ВС", "11:00", "Динамическая растяжка", "5"]
       ]
     },
 
@@ -481,18 +301,8 @@ async function seedDatabase() {
       ],
 
       schedule: [
-        [
-          "ВТ",
-          "18:00",
-          "Джампинг",
-          "3"
-        ],
-        [
-          "ЧТ",
-          "18:00",
-          "Джампинг",
-          "3"
-        ]
+        ["ВТ", "18:00", "Джампинг", "3"],
+        ["ЧТ", "18:00", "Джампинг", "3"]
       ]
     },
 
@@ -512,24 +322,9 @@ async function seedDatabase() {
       ],
 
       schedule: [
-        [
-          "СР",
-          "18:00",
-          "Силовой тренинг",
-          "2"
-        ],
-        [
-          "ПТ",
-          "18:00",
-          "Функционал",
-          "1"
-        ],
-        [
-          "ВС",
-          "11:00",
-          "Функционал",
-          "1"
-        ]
+        ["СР", "18:00", "Силовой тренинг", "2"],
+        ["ПТ", "18:00", "Функционал", "1"],
+        ["ВС", "11:00", "Функционал", "1"]
       ]
     },
 
@@ -540,17 +335,12 @@ async function seedDatabase() {
       directions: [
         [
           "Зумба",
-          "Танцевальный фитнес: выносливость, координация и отличное настроение."
+          "Танцевальный фитнес: кардио, координация и высокий темп."
         ]
       ],
 
       schedule: [
-        [
-          "ПТ",
-          "18:30",
-          "Зумба",
-          "3"
-        ]
+        ["ПТ", "18:30", "Силовой тренинг", "3"]
       ]
     }
   ];
@@ -636,7 +426,7 @@ async function seedDatabase() {
 }
 
 // ==========================================
-// DATA
+// ПОЛУЧЕНИЕ ДАННЫХ
 // ==========================================
 
 async function getTrainers() {
@@ -839,7 +629,7 @@ async function clearState(chat) {
 }
 
 // ==========================================
-// ОСНОВНЫЕ КНОПКИ
+// КНОПКИ
 // ==========================================
 
 function mainKeyboard() {
@@ -1367,7 +1157,7 @@ async function showDirectionAdmin(
 }
 
 // ==========================================
-// ОБРАБОТКА ТЕКСТОВОГО ВВОДА
+// НОРМАЛИЗАЦИЯ ЗАЛА
 // ==========================================
 
 function normalizeHall(
@@ -1398,6 +1188,10 @@ function normalizeHall(
     : "";
 }
 
+// ==========================================
+// ОБРАБОТКА ТЕКСТОВОГО ВВОДА
+// ==========================================
+
 async function processStateMessage(
   chat,
   rawText
@@ -1422,7 +1216,7 @@ async function processStateMessage(
   }
 
   // ========================================
-  // ИМЯ
+  // ИЗМЕНИТЬ ИМЯ
   // ========================================
 
   if (
@@ -1454,7 +1248,7 @@ async function processStateMessage(
   }
 
   // ========================================
-  // ТЕЛЕФОН
+  // ИЗМЕНИТЬ ТЕЛЕФОН
   // ========================================
 
   if (
@@ -1732,7 +1526,7 @@ async function processStateMessage(
   }
 
   // ========================================
-  // НОВОЕ ЗАНЯТИЕ — ДЕНЬ
+  // ДОБАВИТЬ ЗАНЯТИЕ — ДЕНЬ
   // ========================================
 
   if (
@@ -1780,7 +1574,7 @@ async function processStateMessage(
   }
 
   // ========================================
-  // НОВОЕ ЗАНЯТИЕ — ВРЕМЯ
+  // ДОБАВИТЬ ЗАНЯТИЕ — ВРЕМЯ
   // ========================================
 
   if (
@@ -1807,7 +1601,7 @@ async function processStateMessage(
   }
 
   // ========================================
-  // НОВОЕ ЗАНЯТИЕ — НАПРАВЛЕНИЕ
+  // ДОБАВИТЬ ЗАНЯТИЕ — НАПРАВЛЕНИЕ
   // ========================================
 
   if (
@@ -1834,7 +1628,7 @@ async function processStateMessage(
   }
 
   // ========================================
-  // НОВОЕ ЗАНЯТИЕ — ЗАЛ
+  // ДОБАВИТЬ ЗАНЯТИЕ — ЗАЛ
   // ========================================
 
   if (
@@ -2083,7 +1877,7 @@ function trainerPosterTheme(
 
     card:
       bw
-        ? "#f4f4f4"
+        ? "#f3f3f3"
         : "#15181d",
 
     card2:
@@ -2098,12 +1892,12 @@ function trainerPosterTheme(
 
     muted:
       bw
-        ? "#666666"
+        ? "#555555"
         : "#b8bec8",
 
     line:
       bw
-        ? "#d4d4d4"
+        ? "#cecece"
         : "#30343b",
 
     accent:
@@ -2113,7 +1907,7 @@ function trainerPosterTheme(
 
     ghost:
       bw
-        ? "#eeeeee"
+        ? "#ededed"
         : "#171a20",
 
     onAccent:
@@ -2123,7 +1917,7 @@ function trainerPosterTheme(
 
 
 // ==========================================
-// СОРТИРОВКА РАСПИСАНИЯ
+// СОРТИРОВКА
 // ==========================================
 
 function trainerPosterDayOrder(
@@ -2278,7 +2072,7 @@ function trainerPosterLines(
 
 
 // ==========================================
-// ЗАЛЫ
+// ЗАЛ
 // ==========================================
 
 function trainerPosterHall(
@@ -2286,10 +2080,17 @@ function trainerPosterHall(
 ) {
   const value =
     String(hall || "")
+      .trim()
       .toUpperCase();
 
-  if (value === "GYM") {
+  if (
+    value === "GYM"
+  ) {
     return "ТРЕНАЖЕРНЫЙ";
+  }
+
+  if (!value) {
+    return "";
   }
 
   return `ЗАЛ ${value}`;
@@ -2297,7 +2098,7 @@ function trainerPosterHall(
 
 
 // ==========================================
-// ШАПКА A4
+// ШАПКА
 // ==========================================
 
 function trainerPosterHeader(C) {
@@ -2323,17 +2124,17 @@ function trainerPosterHeader(C) {
       y="72"
       fill="${C.accent}"
       font-family="Arial, Helvetica, sans-serif"
-      font-size="48"
+      font-size="50"
       font-weight="900"
     >ТИТАН</text>
 
     <text
       x="1184"
-      y="70"
+      y="69"
       text-anchor="end"
       fill="${C.muted}"
       font-family="Arial, Helvetica, sans-serif"
-      font-size="17"
+      font-size="18"
       font-weight="900"
       letter-spacing="2"
     >СПОРТИВНЫЙ КОМПЛЕКС · САРАПУЛ</text>
@@ -2349,30 +2150,30 @@ function trainerPosterHeader(C) {
 
     <text
       x="56"
-      y="154"
+      y="155"
       fill="${C.text}"
       font-family="Arial, Helvetica, sans-serif"
-      font-size="46"
+      font-size="47"
       font-weight="900"
     >ТРЕНЕРЫ «ТИТАН»</text>
 
     <text
       x="56"
-      y="192"
+      y="193"
       fill="${C.muted}"
       font-family="Arial, Helvetica, sans-serif"
-      font-size="19"
+      font-size="20"
       font-weight="900"
       letter-spacing="2"
     >АКТУАЛЬНОЕ РАСПИСАНИЕ</text>
 
     <text
       x="1184"
-      y="182"
+      y="183"
       text-anchor="end"
       fill="${C.ghost}"
       font-family="Arial, Helvetica, sans-serif"
-      font-size="82"
+      font-size="84"
       font-weight="900"
     >ТИТАН</text>
   `;
@@ -2380,7 +2181,7 @@ function trainerPosterHeader(C) {
 
 
 // ==========================================
-// ФУТЕР A4
+// ФУТЕР
 // ==========================================
 
 function trainerPosterFooter(C) {
@@ -2396,20 +2197,20 @@ function trainerPosterFooter(C) {
 
     <text
       x="56"
-      y="1730"
+      y="1731"
       fill="${C.muted}"
       font-family="Arial, Helvetica, sans-serif"
-      font-size="15"
+      font-size="16"
       font-weight="800"
     >г. Сарапул · ул. Советская, 46</text>
 
     <text
       x="1184"
-      y="1730"
+      y="1731"
       text-anchor="end"
       fill="${C.accent}"
       font-family="Arial, Helvetica, sans-serif"
-      font-size="17"
+      font-size="18"
       font-weight="900"
     >ТИТАН · САРАПУЛ</text>
   `;
@@ -2417,7 +2218,46 @@ function trainerPosterFooter(C) {
 
 
 // ==========================================
-// ТАБЛИЦА РАСПИСАНИЯ
+// ЛЕГЕНДА ЗАЛОВ
+// ==========================================
+
+function renderHallLegend(
+  x,
+  y,
+  width,
+  C,
+  compact = false
+) {
+  const size =
+    compact
+      ? 12
+      : 14;
+
+  return `
+    <text
+      x="${x}"
+      y="${y}"
+      fill="${C.muted}"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="${size + 2}"
+      font-weight="900"
+      letter-spacing="1.5"
+    >ЗАЛЫ</text>
+
+    <text
+      x="${x + 64}"
+      y="${y}"
+      fill="${C.text}"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="${size}"
+      font-weight="800"
+    >1 — КРОССФИТ / БОКС · 2 — TRX / АНТИГРАВИТИ · 3 — СИЛОВОЙ · 5 — ЙОГА / АЭРОЙОГА · GYM — ТРЕНАЖЕРНЫЙ</text>
+  `;
+}
+
+
+// ==========================================
+// УМНОЕ РАСПИСАНИЕ
 // ==========================================
 
 function renderTrainerSchedule({
@@ -2427,12 +2267,13 @@ function renderTrainerSchedule({
   width,
   height,
   C,
-  compact = false
+  mode = "single"
 }) {
   const original =
     trainerPosterSortSchedule(
       rows
     );
+
 
   if (!original.length) {
     return `
@@ -2440,7 +2281,7 @@ function renderTrainerSchedule({
         x="${x}"
         y="${y}"
         width="${width}"
-        height="58"
+        height="64"
         rx="10"
         fill="${C.card2}"
         stroke="${C.line}"
@@ -2449,110 +2290,85 @@ function renderTrainerSchedule({
 
       <text
         x="${x + 18}"
-        y="${y + 36}"
+        y="${y + 40}"
         fill="${C.muted}"
         font-family="Arial, Helvetica, sans-serif"
-        font-size="15"
-        font-weight="700"
+        font-size="18"
+        font-weight="800"
       >Расписание пока не заполнено</text>
     `;
   }
 
 
+  let preferredMinRowH;
+  let maxRowH;
+  let maxColumns;
+
+
+  if (
+    mode === "single"
+  ) {
+    preferredMinRowH = 34;
+    maxRowH = 58;
+    maxColumns = 2;
+  } else if (
+    mode === "double"
+  ) {
+    preferredMinRowH = 30;
+    maxRowH = 42;
+    maxColumns = 2;
+  } else {
+    preferredMinRowH = 24;
+    maxRowH = 34;
+    maxColumns = 2;
+  }
+
+
   const headerH =
-    compact
+    mode === "triple"
       ? 28
-      : 36;
+      : 32;
 
-  const minRowH =
-    compact
-      ? 21
-      : 30;
 
-  const maxRowH =
-    compact
-      ? 38
-      : 64;
-
-  const gap =
-    compact
+  const columnGap =
+    mode === "triple"
       ? 8
       : 12;
 
 
   // ========================================
-  // ВЫЧИСЛЯЕМ ВМЕСТИМОСТЬ
+  // ВЫБИРАЕМ ЧИСЛО КОЛОНОК
   // ========================================
-
-  const maxRowsPerColumn =
-    Math.max(
-      1,
-      Math.floor(
-        (
-          height -
-          headerH -
-          8
-        ) /
-        minRowH
-      )
-    );
-
 
   let columns = 1;
 
-  while (
-    columns < 3 &&
-    original.length >
-      maxRowsPerColumn *
-        columns
-  ) {
-    columns++;
-  }
+
+  const oneColumnRowH =
+    Math.floor(
+      (
+        height -
+        headerH -
+        8
+      ) /
+      original.length
+    );
 
 
-  const capacity =
-    maxRowsPerColumn *
-    columns;
-
-
-  let schedule =
-    original;
-
-
-  let omitted = 0;
-
-
-  // Если даже 3 колонки не вмещают всё,
-  // оставляем последнюю строку под сообщение
-  // «+ ещё N занятий».
   if (
-    original.length >
-    capacity
+    oneColumnRowH <
+      preferredMinRowH
   ) {
-    omitted =
-      original.length -
-      (capacity - 1);
-
-    schedule = [
-      ...original.slice(
-        0,
-        capacity - 1
-      ),
-
-      {
-        day: "",
-        time: "",
-        direction:
-          `+ ЕЩЁ ${omitted} ЗАНЯТИЙ`,
-        hall: ""
-      }
-    ];
+    columns =
+      Math.min(
+        maxColumns,
+        2
+      );
   }
 
 
-  const rowsPerColumn =
+  let rowsPerColumn =
     Math.ceil(
-      schedule.length /
+      original.length /
       columns
     );
 
@@ -2568,9 +2384,88 @@ function renderTrainerSchedule({
     );
 
 
+  // ========================================
+  // ЗАЩИТА ОТ ПЕРЕПОЛНЕНИЯ
+  // ========================================
+
+  let schedule =
+    original;
+
+
+  const absoluteMin =
+    mode === "single"
+      ? 27
+      : mode === "double"
+      ? 24
+      : 20;
+
+
+  const maxRowsPerColumn =
+    Math.max(
+      1,
+      Math.floor(
+        (
+          height -
+          headerH -
+          8
+        ) /
+        absoluteMin
+      )
+    );
+
+
+  const capacity =
+    maxRowsPerColumn *
+    columns;
+
+
+  if (
+    original.length >
+    capacity
+  ) {
+    const omitted =
+      original.length -
+      (capacity - 1);
+
+
+    schedule = [
+      ...original.slice(
+        0,
+        capacity - 1
+      ),
+
+      {
+        day: "",
+        time: "",
+        direction:
+          `+ ЕЩЁ ${omitted} ЗАНЯТИЙ`,
+        hall: ""
+      }
+    ];
+
+
+    rowsPerColumn =
+      Math.ceil(
+        schedule.length /
+        columns
+      );
+
+
+    rowH =
+      Math.floor(
+        (
+          height -
+          headerH -
+          8
+        ) /
+        rowsPerColumn
+      );
+  }
+
+
   rowH =
     Math.max(
-      minRowH,
+      absoluteMin,
       Math.min(
         maxRowH,
         rowH
@@ -2581,8 +2476,10 @@ function renderTrainerSchedule({
   const columnWidth =
     (
       width -
-      gap *
-        (columns - 1)
+      columnGap *
+        (
+          columns - 1
+        )
     ) /
     columns;
 
@@ -2591,7 +2488,7 @@ function renderTrainerSchedule({
 
 
   // ========================================
-  // ЗАГОЛОВКИ
+  // ШАПКА ТАБЛИЦЫ
   // ========================================
 
   for (
@@ -2604,8 +2501,16 @@ function renderTrainerSchedule({
       column *
         (
           columnWidth +
-          gap
+          columnGap
         );
+
+
+    const baseFont =
+      mode === "single"
+        ? 13
+        : mode === "double"
+        ? 12
+        : 10;
 
 
     svg += `
@@ -2614,46 +2519,34 @@ function renderTrainerSchedule({
         y="${y}"
         width="${columnWidth}"
         height="${headerH}"
-        rx="7"
+        rx="8"
         fill="${C.accent}"
       />
 
       <text
-        x="${cx + 9}"
+        x="${cx + 10}"
         y="${y + headerH - 9}"
         fill="${C.onAccent}"
         font-family="Arial, Helvetica, sans-serif"
-        font-size="${
-          compact
-            ? 9
-            : 12
-        }"
+        font-size="${baseFont}"
         font-weight="900"
       >ДЕНЬ</text>
 
       <text
-        x="${cx + 57}"
+        x="${cx + 66}"
         y="${y + headerH - 9}"
         fill="${C.onAccent}"
         font-family="Arial, Helvetica, sans-serif"
-        font-size="${
-          compact
-            ? 9
-            : 12
-        }"
+        font-size="${baseFont}"
         font-weight="900"
       >ВРЕМЯ</text>
 
       <text
-        x="${cx + 132}"
+        x="${cx + 150}"
         y="${y + headerH - 9}"
         fill="${C.onAccent}"
         font-family="Arial, Helvetica, sans-serif"
-        font-size="${
-          compact
-            ? 9
-            : 12
-        }"
+        font-size="${baseFont}"
         font-weight="900"
       >НАПРАВЛЕНИЕ</text>
 
@@ -2661,17 +2554,13 @@ function renderTrainerSchedule({
         x="${
           cx +
           columnWidth -
-          9
+          10
         }"
         y="${y + headerH - 9}"
         text-anchor="end"
         fill="${C.onAccent}"
         font-family="Arial, Helvetica, sans-serif"
-        font-size="${
-          compact
-            ? 9
-            : 12
-        }"
+        font-size="${baseFont}"
         font-weight="900"
       >ЗАЛ</text>
     `;
@@ -2683,7 +2572,10 @@ function renderTrainerSchedule({
   // ========================================
 
   schedule.forEach(
-    (lesson, index) => {
+    (
+      lesson,
+      index
+    ) => {
       const column =
         Math.floor(
           index /
@@ -2701,7 +2593,7 @@ function renderTrainerSchedule({
         column *
           (
             columnWidth +
-            gap
+            columnGap
           );
 
 
@@ -2713,30 +2605,61 @@ function renderTrainerSchedule({
           rowH;
 
 
-      const fontSize =
-        compact
-          ? Math.max(
-              9,
-              Math.min(
-                13,
-                rowH * 0.4
-              )
+      const summaryRow =
+        String(
+          lesson.direction || ""
+        ).startsWith(
+          "+ ЕЩЁ"
+        );
+
+
+      let fontSize;
+
+
+      if (
+        mode === "single"
+      ) {
+        fontSize =
+          Math.max(
+            14,
+            Math.min(
+              19,
+              rowH * 0.44
             )
-          : Math.max(
-              12,
-              Math.min(
-                18,
-                rowH * 0.35
-              )
-            );
+          );
+      } else if (
+        mode === "double"
+      ) {
+        fontSize =
+          Math.max(
+            13,
+            Math.min(
+              17,
+              rowH * 0.46
+            )
+          );
+      } else {
+        fontSize =
+          Math.max(
+            10.5,
+            Math.min(
+              14,
+              rowH * 0.47
+            )
+          );
+      }
 
 
       const directionChars =
         columns === 1
-          ? 42
-          : columns === 2
+          ? mode === "single"
+            ? 43
+            : 34
+          : mode === "single"
           ? 20
-          : 12;
+          : mode === "double"
+          ? 17
+          : 13;
 
 
       const direction =
@@ -2744,14 +2667,6 @@ function renderTrainerSchedule({
           lesson.direction || "",
           directionChars
         )[0] || "";
-
-
-      const summaryRow =
-        String(
-          lesson.direction || ""
-        ).startsWith(
-          "+ ЕЩЁ"
-        );
 
 
       svg += `
@@ -2765,9 +2680,7 @@ function renderTrainerSchedule({
           )}"
           rx="7"
           fill="${
-            summaryRow
-              ? C.card2
-              : localIndex % 2 === 0
+            localIndex % 2 === 0
               ? C.card2
               : C.card
           }"
@@ -2777,7 +2690,9 @@ function renderTrainerSchedule({
       `;
 
 
-      if (summaryRow) {
+      if (
+        summaryRow
+      ) {
         svg += `
           <text
             x="${rx + 12}"
@@ -2801,7 +2716,7 @@ function renderTrainerSchedule({
 
       svg += `
         <text
-          x="${rx + 9}"
+          x="${rx + 10}"
           y="${
             ry +
             rowH / 2 +
@@ -2816,7 +2731,7 @@ function renderTrainerSchedule({
         )}</text>
 
         <text
-          x="${rx + 57}"
+          x="${rx + 66}"
           y="${
             ry +
             rowH / 2 +
@@ -2831,7 +2746,7 @@ function renderTrainerSchedule({
         )}</text>
 
         <text
-          x="${rx + 132}"
+          x="${rx + 150}"
           y="${
             ry +
             rowH / 2 +
@@ -2840,7 +2755,7 @@ function renderTrainerSchedule({
           fill="${C.text}"
           font-family="Arial, Helvetica, sans-serif"
           font-size="${Math.max(
-            8,
+            9,
             fontSize - 1
           )}"
           font-weight="800"
@@ -2850,7 +2765,7 @@ function renderTrainerSchedule({
           x="${
             rx +
             columnWidth -
-            9
+            10
           }"
           y="${
             ry +
@@ -2861,7 +2776,7 @@ function renderTrainerSchedule({
           fill="${C.accent}"
           font-family="Arial, Helvetica, sans-serif"
           font-size="${Math.max(
-            8,
+            9,
             fontSize - 1
           )}"
           font-weight="900"
@@ -2880,6 +2795,529 @@ function renderTrainerSchedule({
 
 
 // ==========================================
+// КАРТОЧКИ НАПРАВЛЕНИЙ
+// ==========================================
+
+function renderDirectionCards({
+  directions = [],
+  x,
+  y,
+  width,
+  C,
+  mode = "single"
+}) {
+  const list =
+    Array.isArray(
+      directions
+    )
+      ? directions
+      : [];
+
+
+  if (!list.length) {
+    return {
+      svg: `
+        <rect
+          x="${x}"
+          y="${y}"
+          width="${width}"
+          height="64"
+          rx="10"
+          fill="${C.card2}"
+          stroke="${C.line}"
+          stroke-width="1"
+        />
+
+        <text
+          x="${x + 16}"
+          y="${y + 39}"
+          fill="${C.muted}"
+          font-family="Arial, Helvetica, sans-serif"
+          font-size="17"
+          font-weight="800"
+        >Направления пока не заполнены</text>
+      `,
+
+      height: 64
+    };
+  }
+
+
+  // ========================================
+  // 1 ТРЕНЕР
+  // ========================================
+
+  if (
+    mode === "single"
+  ) {
+    const visible =
+      list.slice(
+        0,
+        6
+      );
+
+
+    const columns =
+      visible.length === 1
+        ? 1
+        : 2;
+
+
+    const gap =
+      12;
+
+
+    const cardW =
+      (
+        width -
+        gap *
+          (
+            columns - 1
+          )
+      ) /
+      columns;
+
+
+    const cardH =
+      94;
+
+
+    const rows =
+      Math.ceil(
+        visible.length /
+        columns
+      );
+
+
+    let svg = "";
+
+
+    visible.forEach(
+      (
+        direction,
+        index
+      ) => {
+        const col =
+          index % columns;
+
+        const row =
+          Math.floor(
+            index /
+            columns
+          );
+
+
+        const dx =
+          x +
+          col *
+            (
+              cardW +
+              gap
+            );
+
+
+        const dy =
+          y +
+          row *
+            (
+              cardH +
+              gap
+            );
+
+
+        const description =
+          trainerPosterWrap(
+            direction.description ||
+              "",
+            columns === 1
+              ? 80
+              : 42
+          ).slice(
+            0,
+            2
+          );
+
+
+        svg += `
+          <rect
+            x="${dx}"
+            y="${dy}"
+            width="${cardW}"
+            height="${cardH}"
+            rx="12"
+            fill="${C.card2}"
+            stroke="${C.line}"
+            stroke-width="1"
+          />
+
+          <rect
+            x="${dx}"
+            y="${dy}"
+            width="7"
+            height="${cardH}"
+            rx="4"
+            fill="${C.accent}"
+          />
+
+          <text
+            x="${dx + 18}"
+            y="${dy + 31}"
+            fill="${C.accent}"
+            font-family="Arial, Helvetica, sans-serif"
+            font-size="22"
+            font-weight="900"
+          >${esc(
+            String(
+              direction.name || ""
+            ).toUpperCase()
+          )}</text>
+
+          ${trainerPosterLines(
+            description,
+            dx + 18,
+            dy + 57,
+            14,
+            C.text,
+            700,
+            18
+          )}
+        `;
+      }
+    );
+
+
+    return {
+      svg,
+      height:
+        rows * cardH +
+        Math.max(
+          0,
+          rows - 1
+        ) * gap
+    };
+  }
+
+
+  // ========================================
+  // 2 ТРЕНЕРА
+  // ========================================
+
+  if (
+    mode === "double"
+  ) {
+    const visible =
+      list.slice(
+        0,
+        6
+      );
+
+
+    const columns =
+      visible.length === 1
+        ? 1
+        : 2;
+
+
+    const gap =
+      10;
+
+
+    const cardW =
+      (
+        width -
+        gap *
+          (
+            columns - 1
+          )
+      ) /
+      columns;
+
+
+    const cardH =
+      86;
+
+
+    const rows =
+      Math.ceil(
+        visible.length /
+        columns
+      );
+
+
+    let svg = "";
+
+
+    visible.forEach(
+      (
+        direction,
+        index
+      ) => {
+        const col =
+          index % columns;
+
+        const row =
+          Math.floor(
+            index /
+            columns
+          );
+
+
+        const dx =
+          x +
+          col *
+            (
+              cardW +
+              gap
+            );
+
+
+        const dy =
+          y +
+          row *
+            (
+              cardH +
+              gap
+            );
+
+
+        const titleLines =
+          trainerPosterWrap(
+            String(
+              direction.name || ""
+            ).toUpperCase(),
+            27
+          ).slice(
+            0,
+            2
+          );
+
+
+        const description =
+          trainerPosterWrap(
+            direction.description ||
+              "",
+            42
+          ).slice(
+            0,
+            2
+          );
+
+
+        svg += `
+          <rect
+            x="${dx}"
+            y="${dy}"
+            width="${cardW}"
+            height="${cardH}"
+            rx="11"
+            fill="${C.card2}"
+            stroke="${C.line}"
+            stroke-width="1"
+          />
+
+          <rect
+            x="${dx}"
+            y="${dy}"
+            width="7"
+            height="${cardH}"
+            rx="4"
+            fill="${C.accent}"
+          />
+
+          ${trainerPosterLines(
+            titleLines,
+            dx + 18,
+            dy + 27,
+            18,
+            C.accent,
+            900,
+            20
+          )}
+
+          ${trainerPosterLines(
+            description,
+            dx + 18,
+            dy +
+              (
+                titleLines.length > 1
+                  ? 66
+                  : 52
+              ),
+            13,
+            C.text,
+            700,
+            15
+          )}
+        `;
+      }
+    );
+
+
+    return {
+      svg,
+      height:
+        rows * cardH +
+        Math.max(
+          0,
+          rows - 1
+        ) * gap
+    };
+  }
+
+
+  // ========================================
+  // 3 ТРЕНЕРА
+  // ========================================
+
+  const visible =
+    list.slice(
+      0,
+      4
+    );
+
+
+  const columns =
+    visible.length <= 2
+      ? visible.length
+      : 2;
+
+
+  const gap =
+    8;
+
+
+  const cardW =
+    (
+      width -
+      gap *
+        (
+          columns - 1
+        )
+    ) /
+    columns;
+
+
+  const cardH =
+    58;
+
+
+  const rows =
+    Math.ceil(
+      visible.length /
+      columns
+    );
+
+
+  let svg = "";
+
+
+  visible.forEach(
+    (
+      direction,
+      index
+    ) => {
+      const col =
+        index %
+        columns;
+
+      const row =
+        Math.floor(
+          index /
+          columns
+        );
+
+
+      const dx =
+        x +
+        col *
+          (
+            cardW +
+            gap
+          );
+
+
+      const dy =
+        y +
+        row *
+          (
+            cardH +
+            gap
+          );
+
+
+      const title =
+        trainerPosterWrap(
+          String(
+            direction.name || ""
+          ).toUpperCase(),
+          25
+        )[0] || "";
+
+
+      const description =
+        trainerPosterWrap(
+          direction.description ||
+            "",
+          38
+        )[0] || "";
+
+
+      svg += `
+        <rect
+          x="${dx}"
+          y="${dy}"
+          width="${cardW}"
+          height="${cardH}"
+          rx="9"
+          fill="${C.card2}"
+          stroke="${C.line}"
+          stroke-width="1"
+        />
+
+        <rect
+          x="${dx}"
+          y="${dy}"
+          width="6"
+          height="${cardH}"
+          rx="3"
+          fill="${C.accent}"
+        />
+
+        <text
+          x="${dx + 15}"
+          y="${dy + 24}"
+          fill="${C.accent}"
+          font-family="Arial, Helvetica, sans-serif"
+          font-size="14"
+          font-weight="900"
+        >${esc(title)}</text>
+
+        <text
+          x="${dx + 15}"
+          y="${dy + 44}"
+          fill="${C.text}"
+          font-family="Arial, Helvetica, sans-serif"
+          font-size="10.5"
+          font-weight="700"
+        >${esc(description)}</text>
+      `;
+    }
+  );
+
+
+  return {
+    svg,
+    height:
+      rows * cardH +
+      Math.max(
+        0,
+        rows - 1
+      ) * gap
+  };
+}
+
+
+// ==========================================
 // ОДИН ТРЕНЕР
 // ==========================================
 
@@ -2892,14 +3330,18 @@ function makePoster(
       theme
     );
 
+
   const W = 1240;
   const H = 1754;
 
   const x = 56;
   const y = 225;
 
-  const cardW = 1128;
-  const cardH = 1435;
+  const cardW =
+    1128;
+
+  const cardH =
+    1435;
 
 
   const directions =
@@ -2918,7 +3360,46 @@ function makePoster(
       : [];
 
 
-  let svg = `
+  const directionsBlock =
+    renderDirectionCards({
+      directions,
+      x:
+        x + 28,
+      y:
+        y + 160,
+      width:
+        cardW - 56,
+      C,
+      mode:
+        "single"
+    });
+
+
+  const scheduleTitleY =
+    y +
+    160 +
+    directionsBlock.height +
+    38;
+
+
+  const hallsY =
+    y +
+    cardH -
+    78;
+
+
+  const scheduleY =
+    scheduleTitleY +
+    18;
+
+
+  const scheduleHeight =
+    hallsY -
+    scheduleY -
+    35;
+
+
+  return `
     <svg
       xmlns="http://www.w3.org/2000/svg"
       width="210mm"
@@ -2927,288 +3408,140 @@ function makePoster(
       preserveAspectRatio="xMidYMid meet"
     >
 
-    ${trainerPosterHeader(C)}
+      ${trainerPosterHeader(C)}
 
-    <rect
-      x="${x}"
-      y="${y}"
-      width="${cardW}"
-      height="${cardH}"
-      rx="24"
-      fill="${C.card}"
-      stroke="${C.line}"
-      stroke-width="2"
-    />
+      <rect
+        x="${x}"
+        y="${y}"
+        width="${cardW}"
+        height="${cardH}"
+        rx="24"
+        fill="${C.card}"
+        stroke="${C.line}"
+        stroke-width="2"
+      />
 
-    <rect
-      x="${x}"
-      y="${y}"
-      width="10"
-      height="${cardH}"
-      rx="5"
-      fill="${C.accent}"
-    />
+      <rect
+        x="${x}"
+        y="${y}"
+        width="10"
+        height="${cardH}"
+        rx="5"
+        fill="${C.accent}"
+      />
 
-    <text
-      x="${x + 28}"
-      y="${y + 62}"
-      fill="${C.accent}"
-      font-family="Arial, Helvetica, sans-serif"
-      font-size="22"
-      font-weight="900"
-    >01</text>
+      <text
+        x="${x + 28}"
+        y="${y + 61}"
+        fill="${C.accent}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="24"
+        font-weight="900"
+      >01</text>
 
-    <text
-      x="${x + 78}"
-      y="${y + 63}"
-      fill="${C.text}"
-      font-family="Arial, Helvetica, sans-serif"
-      font-size="48"
-      font-weight="900"
-    >${esc(
-      String(
-        trainer.name || ""
-      ).toUpperCase()
-    )}</text>
+      <text
+        x="${x + 82}"
+        y="${y + 64}"
+        fill="${C.text}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="50"
+        font-weight="900"
+      >${esc(
+        String(
+          trainer.name || ""
+        ).toUpperCase()
+      )}</text>
 
-    <text
-      x="${
-        x +
-        cardW -
-        28
-      }"
-      y="${y + 61}"
-      text-anchor="end"
-      fill="${C.accent}"
-      font-family="Arial, Helvetica, sans-serif"
-      font-size="24"
-      font-weight="900"
-    >${esc(
-      trainer.phone || ""
-    )}</text>
+      <text
+        x="${
+          x +
+          cardW -
+          28
+        }"
+        y="${y + 62}"
+        text-anchor="end"
+        fill="${C.accent}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="26"
+        font-weight="900"
+      >${esc(
+        trainer.phone || ""
+      )}</text>
 
-    <line
-      x1="${x + 28}"
-      y1="${y + 88}"
-      x2="${
-        x +
-        cardW -
-        28
-      }"
-      y2="${y + 88}"
-      stroke="${C.line}"
-      stroke-width="2"
-    />
+      <line
+        x1="${x + 28}"
+        y1="${y + 91}"
+        x2="${
+          x +
+          cardW -
+          28
+        }"
+        y2="${y + 91}"
+        stroke="${C.line}"
+        stroke-width="2"
+      />
 
-    <text
-      x="${x + 28}"
-      y="${y + 130}"
-      fill="${C.muted}"
-      font-family="Arial, Helvetica, sans-serif"
-      font-size="18"
-      font-weight="900"
-      letter-spacing="2"
-    >НАПРАВЛЕНИЯ</text>
-  `;
+      <text
+        x="${x + 28}"
+        y="${y + 136}"
+        fill="${C.muted}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="20"
+        font-weight="900"
+        letter-spacing="2"
+      >НАПРАВЛЕНИЯ</text>
 
+      ${directionsBlock.svg}
 
-  const visibleDirections =
-    directions.slice(
-      0,
-      5
-    );
+      <text
+        x="${x + 28}"
+        y="${scheduleTitleY}"
+        fill="${C.muted}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="20"
+        font-weight="900"
+        letter-spacing="2"
+      >РАСПИСАНИЕ</text>
 
+      ${renderTrainerSchedule({
+        rows:
+          schedule,
 
-  const directionTop =
-    y + 150;
+        x:
+          x + 28,
 
+        y:
+          scheduleY,
 
-  const directionH =
-    visibleDirections.length <= 2
-      ? 98
-      : visibleDirections.length <= 4
-      ? 76
-      : 64;
+        width:
+          cardW - 56,
 
+        height:
+          scheduleHeight,
 
-  const directionGap =
-    9;
+        C,
 
+        mode:
+          "single"
+      })}
 
-  visibleDirections.forEach(
-    (
-      direction,
-      index
-    ) => {
-      const dy =
-        directionTop +
-        index *
-          (
-            directionH +
-            directionGap
-          );
-
-
-      const description =
-        trainerPosterWrap(
-          direction.description ||
-            "",
-          75
-        ).slice(
-          0,
-          2
-        );
-
-
-      svg += `
-        <rect
-          x="${x + 28}"
-          y="${dy}"
-          width="${cardW - 56}"
-          height="${directionH}"
-          rx="12"
-          fill="${C.card2}"
-          stroke="${C.line}"
-          stroke-width="1"
-        />
-
-        <rect
-          x="${x + 28}"
-          y="${dy}"
-          width="7"
-          height="${directionH}"
-          rx="4"
-          fill="${C.accent}"
-        />
-
-        <text
-          x="${x + 48}"
-          y="${dy + 28}"
-          fill="${C.accent}"
-          font-family="Arial, Helvetica, sans-serif"
-          font-size="${
-            visibleDirections.length >= 5
-              ? 19
-              : 23
-          }"
-          font-weight="900"
-        >${esc(
-          String(
-            direction.name || ""
-          ).toUpperCase()
-        )}</text>
-
-        ${trainerPosterLines(
-          description,
-          x + 48,
-          dy + 52,
-          visibleDirections.length >= 5
-            ? 13
-            : 15,
-          C.text,
-          700,
-          18
-        )}
-      `;
-    }
-  );
-
-
-  const directionsBottom =
-    directionTop +
-    visibleDirections.length *
-      (
-        directionH +
-        directionGap
-      );
-
-
-  const scheduleTitleY =
-    Math.max(
-      directionsBottom + 24,
-      y + 465
-    );
-
-
-  const hallsY =
-    y +
-    cardH -
-    165;
-
-
-  const scheduleY =
-    scheduleTitleY + 20;
-
-
-  const scheduleHeight =
-    hallsY -
-    scheduleY -
-    30;
-
-
-  svg += `
-    <text
-      x="${x + 28}"
-      y="${scheduleTitleY}"
-      fill="${C.muted}"
-      font-family="Arial, Helvetica, sans-serif"
-      font-size="18"
-      font-weight="900"
-      letter-spacing="2"
-    >РАСПИСАНИЕ</text>
-
-    ${renderTrainerSchedule({
-      rows: schedule,
-      x: x + 28,
-      y: scheduleY,
-      width:
+      ${renderHallLegend(
+        x + 28,
+        hallsY,
         cardW - 56,
-      height:
-        scheduleHeight,
-      C,
-      compact: false
-    })}
+        C,
+        false
+      )}
 
-    <text
-      x="${x + 28}"
-      y="${hallsY}"
-      fill="${C.muted}"
-      font-family="Arial, Helvetica, sans-serif"
-      font-size="16"
-      font-weight="900"
-      letter-spacing="2"
-    >ЗАЛЫ «ТИТАН»</text>
-
-    <text
-      x="${x + 28}"
-      y="${hallsY + 31}"
-      fill="${C.text}"
-      font-family="Arial, Helvetica, sans-serif"
-      font-size="13"
-      font-weight="800"
-    >1 — КРОССФИТ / БОКС · 2 — TRX / АНТИГРАВИТИ · 3 — СИЛОВОЙ ТРЕНИНГ</text>
-
-    <text
-      x="${x + 28}"
-      y="${hallsY + 57}"
-      fill="${C.text}"
-      font-family="Arial, Helvetica, sans-serif"
-      font-size="13"
-      font-weight="800"
-    >5 — ЙОГА / АЭРОЙОГА · GYM — ТРЕНАЖЕРНЫЙ ЗАЛ</text>
-
-    ${trainerPosterFooter(C)}
+      ${trainerPosterFooter(C)}
 
     </svg>
   `;
-
-
-  return svg;
 }
 
 
 // ==========================================
-// ДВА / ТРИ ТРЕНЕРА
+// 2 ИЛИ 3 ТРЕНЕРА
 // ==========================================
 
 function makeMultiTrainerPoster(
@@ -3257,8 +3590,10 @@ function makeMultiTrainerPoster(
   const count =
     list.length;
 
+
   const top =
     225;
+
 
   const bottom =
     1655;
@@ -3296,7 +3631,7 @@ function makeMultiTrainerPoster(
       preserveAspectRatio="xMidYMid meet"
     >
 
-    ${trainerPosterHeader(C)}
+      ${trainerPosterHeader(C)}
   `;
 
 
@@ -3338,22 +3673,35 @@ function makeMultiTrainerPoster(
           : [];
 
 
+      // ====================================
+      // РАЗМЕРЫ ДЛЯ 2 ТРЕНЕРОВ
+      // ====================================
+
       const nameSize =
         count === 2
-          ? 34
-          : 26;
+          ? 42
+          : 30;
 
 
       const phoneSize =
+        count === 2
+          ? 22
+          : 17;
+
+
+      const sectionSize =
         count === 2
           ? 18
           : 14;
 
 
-      const sectionSize =
-        count === 2
-          ? 15
-          : 12;
+      const headerLineY =
+        cardY +
+        (
+          count === 2
+            ? 78
+            : 65
+        );
 
 
       svg += `
@@ -3362,7 +3710,7 @@ function makeMultiTrainerPoster(
           y="${cardY}"
           width="${cardW}"
           height="${cardH}"
-          rx="21"
+          rx="22"
           fill="${C.card}"
           stroke="${C.line}"
           stroke-width="2"
@@ -3371,7 +3719,7 @@ function makeMultiTrainerPoster(
         <rect
           x="${PAD}"
           y="${cardY}"
-          width="9"
+          width="10"
           height="${cardH}"
           rx="5"
           fill="${C.accent}"
@@ -3379,13 +3727,20 @@ function makeMultiTrainerPoster(
 
         <text
           x="${innerX}"
-          y="${cardY + 43}"
+          y="${
+            cardY +
+            (
+              count === 2
+                ? 50
+                : 42
+            )
+          }"
           fill="${C.accent}"
           font-family="Arial, Helvetica, sans-serif"
           font-size="${
             count === 2
-              ? 17
-              : 13
+              ? 20
+              : 15
           }"
           font-weight="900"
         >${String(
@@ -3396,8 +3751,15 @@ function makeMultiTrainerPoster(
         )}</text>
 
         <text
-          x="${innerX + 43}"
-          y="${cardY + 45}"
+          x="${innerX + 52}"
+          y="${
+            cardY +
+            (
+              count === 2
+                ? 52
+                : 44
+            )
+          }"
           fill="${C.text}"
           font-family="Arial, Helvetica, sans-serif"
           font-size="${nameSize}"
@@ -3414,7 +3776,14 @@ function makeMultiTrainerPoster(
             cardW -
             26
           }"
-          y="${cardY + 43}"
+          y="${
+            cardY +
+            (
+              count === 2
+                ? 50
+                : 43
+            )
+          }"
           text-anchor="end"
           fill="${C.accent}"
           font-family="Arial, Helvetica, sans-serif"
@@ -3426,13 +3795,13 @@ function makeMultiTrainerPoster(
 
         <line
           x1="${innerX}"
-          y1="${cardY + 64}"
+          y1="${headerLineY}"
           x2="${
             PAD +
             cardW -
             26
           }"
-          y2="${cardY + 64}"
+          y2="${headerLineY}"
           stroke="${C.line}"
           stroke-width="1.5"
         />
@@ -3440,11 +3809,11 @@ function makeMultiTrainerPoster(
 
 
       const directionTitleY =
-        cardY +
+        headerLineY +
         (
           count === 2
-            ? 100
-            : 87
+            ? 38
+            : 30
         );
 
 
@@ -3461,172 +3830,67 @@ function makeMultiTrainerPoster(
       `;
 
 
-      const maxDirections =
-        count === 2
-          ? 4
-          : 3;
+      const directionBlock =
+        renderDirectionCards({
+          directions,
+
+          x:
+            innerX,
+
+          y:
+            directionTitleY +
+            16,
+
+          width:
+            innerW,
+
+          C,
+
+          mode:
+            count === 2
+              ? "double"
+              : "triple"
+        });
 
 
-      const visibleDirections =
-        directions.slice(
-          0,
-          maxDirections
-        );
-
-
-      const directionGap =
-        8;
-
-
-      const directionCount =
-        Math.max(
-          1,
-          visibleDirections.length
-        );
-
-
-      const directionW =
-        (
-          innerW -
-          directionGap *
-            (
-              directionCount -
-              1
-            )
-        ) /
-        directionCount;
-
-
-      const directionH =
-        count === 2
-          ? 88
-          : 61;
-
-
-      visibleDirections.forEach(
-        (
-          direction,
-          directionIndex
-        ) => {
-          const dx =
-            innerX +
-            directionIndex *
-              (
-                directionW +
-                directionGap
-              );
-
-
-          const description =
-            trainerPosterWrap(
-              direction.description ||
-                "",
-              count === 2
-                ? 25
-                : 16
-            ).slice(
-              0,
-              count === 2
-                ? 2
-                : 1
-            );
-
-
-          svg += `
-            <rect
-              x="${dx}"
-              y="${
-                directionTitleY +
-                13
-              }"
-              width="${directionW}"
-              height="${directionH}"
-              rx="10"
-              fill="${C.card2}"
-              stroke="${C.line}"
-              stroke-width="1"
-            />
-
-            <rect
-              x="${dx}"
-              y="${
-                directionTitleY +
-                13
-              }"
-              width="6"
-              height="${directionH}"
-              rx="3"
-              fill="${C.accent}"
-            />
-
-            <text
-              x="${dx + 14}"
-              y="${
-                directionTitleY +
-                36
-              }"
-              fill="${C.accent}"
-              font-family="Arial, Helvetica, sans-serif"
-              font-size="${
-                count === 2
-                  ? 15
-                  : 11.5
-              }"
-              font-weight="900"
-            >${esc(
-              String(
-                direction.name ||
-                  ""
-              ).toUpperCase()
-            )}</text>
-
-            ${trainerPosterLines(
-              description,
-              dx + 14,
-              directionTitleY +
-                56,
-              count === 2
-                ? 10.5
-                : 8,
-              C.text,
-              700,
-              14
-            )}
-          `;
-        }
-      );
+      svg +=
+        directionBlock.svg;
 
 
       const scheduleTitleY =
         directionTitleY +
-        13 +
-        directionH +
+        16 +
+        directionBlock.height +
         (
           count === 2
-            ? 30
+            ? 32
             : 22
         );
 
 
-      const hallsY =
+      const hallY =
         cardY +
         cardH -
         (
           count === 2
-            ? 63
-            : 46
+            ? 42
+            : 34
         );
 
 
       const scheduleY =
         scheduleTitleY +
-        13;
+        15;
 
 
       const scheduleHeight =
-        hallsY -
+        hallY -
         scheduleY -
-        16;
+        (
+          count === 2
+            ? 24
+            : 18
+        );
 
 
       svg += `
@@ -3641,46 +3905,44 @@ function makeMultiTrainerPoster(
         >РАСПИСАНИЕ</text>
 
         ${renderTrainerSchedule({
-          rows: schedule,
-          x: innerX,
-          y: scheduleY,
+          rows:
+            schedule,
+
+          x:
+            innerX,
+
+          y:
+            scheduleY,
+
           width:
             innerW,
+
           height:
             scheduleHeight,
+
           C,
-          compact: true
+
+          mode:
+            count === 2
+              ? "double"
+              : "triple"
         })}
 
-        <text
-          x="${innerX}"
-          y="${hallsY}"
-          fill="${C.muted}"
-          font-family="Arial, Helvetica, sans-serif"
-          font-size="${sectionSize}"
-          font-weight="900"
-          letter-spacing="2"
-        >ЗАЛЫ</text>
-
-        <text
-          x="${innerX + 58}"
-          y="${hallsY}"
-          fill="${C.text}"
-          font-family="Arial, Helvetica, sans-serif"
-          font-size="${
-            count === 2
-              ? 9.5
-              : 7.5
-          }"
-          font-weight="800"
-        >1 — КРОССФИТ / БОКС · 2 — TRX / АНТИГРАВИТИ · 3 — СИЛОВОЙ · 5 — ЙОГА / АЭРОЙОГА · GYM — ТРЕНАЖЕРНЫЙ</text>
+        ${renderHallLegend(
+          innerX,
+          hallY,
+          innerW,
+          C,
+          count === 3
+        )}
       `;
     }
   );
 
 
   svg += `
-    ${trainerPosterFooter(C)}
+      ${trainerPosterFooter(C)}
+
     </svg>
   `;
 
@@ -3703,10 +3965,16 @@ function makeWeekPoster(
     );
 
 
-  const W = 1240;
-  const H = 1754;
+  const W =
+    1240;
 
-  const PAD = 56;
+
+  const H =
+    1754;
+
+
+  const PAD =
+    56;
 
 
   const schedule =
@@ -3745,11 +4013,18 @@ function makeWeekPoster(
   const days =
     Object.keys(grouped)
       .sort(
-        (a, b) =>
+        (
+          a,
+          b
+        ) =>
           trainerPosterDayOrder(a) -
           trainerPosterDayOrder(b)
       );
 
+
+  // ========================================
+  // РАСПРЕДЕЛЯЕМ ДНИ ПО ДВУМ КОЛОНКАМ
+  // ========================================
 
   const leftDays = [];
   const rightDays = [];
@@ -3763,7 +4038,7 @@ function makeWeekPoster(
   ) {
     const weight =
       grouped[day].length +
-      1.5;
+      1.6;
 
 
     if (
@@ -3780,10 +4055,12 @@ function makeWeekPoster(
 
 
   const top =
-    225;
+    230;
+
 
   const bottom =
-    1605;
+    1600;
+
 
   const columnGap =
     22;
@@ -3814,7 +4091,7 @@ function makeWeekPoster(
 
 
     const headersHeight =
-      dayList.length * 42;
+      dayList.length * 44;
 
 
     const gapsHeight =
@@ -3838,14 +4115,14 @@ function makeWeekPoster(
             ) /
             lessonCount
           )
-        : 38;
+        : 40;
 
 
     rowH =
       Math.max(
-        18,
+        24,
         Math.min(
-          43,
+          44,
           rowH
         )
       );
@@ -3870,17 +4147,17 @@ function makeWeekPoster(
           x="${x}"
           y="${currentY}"
           width="${columnWidth}"
-          height="34"
+          height="36"
           rx="9"
           fill="${C.accent}"
         />
 
         <text
           x="${x + 14}"
-          y="${currentY + 23}"
+          y="${currentY + 25}"
           fill="${C.onAccent}"
           font-family="Arial, Helvetica, sans-serif"
-          font-size="17"
+          font-size="18"
           font-weight="900"
         >${esc(day)}</text>
 
@@ -3890,17 +4167,18 @@ function makeWeekPoster(
             columnWidth -
             14
           }"
-          y="${currentY + 23}"
+          y="${currentY + 25}"
           text-anchor="end"
           fill="${C.onAccent}"
           font-family="Arial, Helvetica, sans-serif"
-          font-size="10"
+          font-size="11"
           font-weight="900"
         >${lessons.length} ЗАН.</text>
       `;
 
 
-      currentY += 40;
+      currentY +=
+        42;
 
 
       lessons.forEach(
@@ -3909,24 +4187,25 @@ function makeWeekPoster(
           index
         ) => {
           const fontSize =
-            rowH <= 22
-              ? 8.5
-              : rowH <= 28
+            rowH <= 26
               ? 10
-              : 12;
+              : rowH <= 32
+              ? 11.5
+              : 13;
 
 
           const direction =
             trainerPosterWrap(
               lesson.direction || "",
-              19
+              18
             )[0] || "";
 
 
           const trainer =
             trainerPosterWrap(
-              lesson.trainer_name || "",
-              15
+              lesson.trainer_name ||
+                "",
+              14
             )[0] || "";
 
 
@@ -3935,10 +4214,9 @@ function makeWeekPoster(
               x="${x}"
               y="${currentY}"
               width="${columnWidth}"
-              height="${Math.max(
-                14,
+              height="${
                 rowH - 4
-              )}"
+              }"
               rx="7"
               fill="${
                 index % 2 === 0
@@ -3967,7 +4245,7 @@ function makeWeekPoster(
             )}</text>
 
             <text
-              x="${x + 76}"
+              x="${x + 80}"
               y="${
                 currentY +
                 rowH / 2 +
@@ -3980,7 +4258,7 @@ function makeWeekPoster(
             >${esc(direction)}</text>
 
             <text
-              x="${x + 270}"
+              x="${x + 275}"
               y="${
                 currentY +
                 rowH / 2 +
@@ -3989,7 +4267,7 @@ function makeWeekPoster(
               fill="${C.muted}"
               font-family="Arial, Helvetica, sans-serif"
               font-size="${Math.max(
-                7,
+                8,
                 fontSize - 1
               )}"
               font-weight="700"
@@ -4063,17 +4341,17 @@ function makeWeekPoster(
         y="72"
         fill="${C.accent}"
         font-family="Arial, Helvetica, sans-serif"
-        font-size="48"
+        font-size="50"
         font-weight="900"
       >ТИТАН</text>
 
       <text
         x="1184"
-        y="70"
+        y="69"
         text-anchor="end"
         fill="${C.muted}"
         font-family="Arial, Helvetica, sans-serif"
-        font-size="17"
+        font-size="18"
         font-weight="900"
         letter-spacing="2"
       >СПОРТИВНЫЙ КОМПЛЕКС · САРАПУЛ</text>
@@ -4089,19 +4367,19 @@ function makeWeekPoster(
 
       <text
         x="56"
-        y="154"
+        y="155"
         fill="${C.text}"
         font-family="Arial, Helvetica, sans-serif"
-        font-size="46"
+        font-size="47"
         font-weight="900"
       >ОБЩЕЕ РАСПИСАНИЕ</text>
 
       <text
         x="56"
-        y="192"
+        y="193"
         fill="${C.muted}"
         font-family="Arial, Helvetica, sans-serif"
-        font-size="19"
+        font-size="20"
         font-weight="900"
         letter-spacing="2"
       >ГРУППОВЫЕ ТРЕНИРОВКИ</text>
@@ -4120,10 +4398,10 @@ function makeWeekPoster(
 
       <text
         x="${PAD}"
-        y="1645"
+        y="1647"
         fill="${C.muted}"
         font-family="Arial, Helvetica, sans-serif"
-        font-size="10.5"
+        font-size="12"
         font-weight="800"
       >1 — КРОССФИТ / БОКС · 2 — TRX / АНТИГРАВИТИ · 3 — СИЛОВОЙ · 5 — ЙОГА / АЭРОЙОГА · GYM — ТРЕНАЖЕРНЫЙ ЗАЛ</text>
 
@@ -4135,7 +4413,7 @@ function makeWeekPoster(
 
 
 // ==========================================
-// ОТПРАВКА ИНФОГРАФИКИ ТРЕНЕРОВ
+// ОТПРАВКА ТРЕНЕРОВ
 // ==========================================
 
 async function sendMultiTrainerPoster(
@@ -4223,8 +4501,11 @@ async function sendMultiTrainerPoster(
     await fetch(
       `${TG}/sendDocument`,
       {
-        method: "POST",
-        body: form
+        method:
+          "POST",
+
+        body:
+          form
       }
     );
 
@@ -4235,8 +4516,7 @@ async function sendMultiTrainerPoster(
 
 
     throw new Error(
-      `Telegram sendDocument error: ` +
-      `${response.status} ${body}`
+      `Telegram sendDocument error: ${response.status} ${body}`
     );
   }
 
@@ -4301,8 +4581,11 @@ async function sendWeekPoster(
     await fetch(
       `${TG}/sendDocument`,
       {
-        method: "POST",
-        body: form
+        method:
+          "POST",
+
+        body:
+          form
       }
     );
 
@@ -4313,8 +4596,7 @@ async function sendWeekPoster(
 
 
     throw new Error(
-      `Telegram sendDocument error: ` +
-      `${response.status} ${body}`
+      `Telegram sendDocument error: ${response.status} ${body}`
     );
   }
 
@@ -4332,7 +4614,7 @@ module.exports = async function webhook(
   try {
 
     // ======================================
-    // ПРОВЕРКА МЕТОДА
+    // GET / ПРОВЕРКА СЕРВИСА
     // ======================================
 
     if (
@@ -4342,20 +4624,21 @@ module.exports = async function webhook(
         .status(200)
         .json({
           ok: true,
-          service: "TITAN Bot"
+          service:
+            "TITAN Bot"
         });
     }
 
 
     // ======================================
-    // ИНИЦИАЛИЗАЦИЯ БАЗЫ
+    // БАЗА ДАННЫХ
     // ======================================
 
     await initDatabase();
 
 
     // ======================================
-    // UPDATE
+    // TELEGRAM UPDATE
     // ======================================
 
     const update =
@@ -4363,11 +4646,13 @@ module.exports = async function webhook(
 
 
     const message =
-      update.message || null;
+      update.message ||
+      null;
 
 
     const query =
-      update.callback_query || null;
+      update.callback_query ||
+      null;
 
 
     const chat =
@@ -4385,7 +4670,7 @@ module.exports = async function webhook(
 
 
     // ======================================
-    // ПОДТВЕРЖДАЕМ CALLBACK
+    // CALLBACK ACK
     // ======================================
 
     if (
@@ -4411,23 +4696,29 @@ module.exports = async function webhook(
       message?.text
     ) {
       const text =
-        message.text.trim();
+        String(
+          message.text
+        ).trim();
 
 
       // ====================================
-      // /start
+      // /START
       // ====================================
 
       if (
         text === "/start"
       ) {
-        await clearState(chat);
+        await clearState(
+          chat
+        );
 
 
         await sendMessage(
           chat,
+
           "🏋️ СПОРТИВНЫЙ КОМПЛЕКС «ТИТАН»\n\n" +
           "Выберите действие:",
+
           mainKeyboard()
         );
 
@@ -4441,7 +4732,7 @@ module.exports = async function webhook(
 
 
       // ====================================
-      // ОБРАБОТКА СОСТОЯНИЯ
+      // СОСТОЯНИЯ РЕДАКТИРОВАНИЯ
       // ====================================
 
       const handled =
@@ -4460,9 +4751,15 @@ module.exports = async function webhook(
       }
 
 
+      // ====================================
+      // ЛЮБОЙ ДРУГОЙ ТЕКСТ
+      // ====================================
+
       await sendMessage(
         chat,
+
         "Выберите действие:",
+
         mainKeyboard()
       );
 
@@ -4476,7 +4773,7 @@ module.exports = async function webhook(
 
 
     // ======================================
-    // ЕСЛИ ЭТО НЕ CALLBACK
+    // ЕСЛИ CALLBACK НЕТ
     // ======================================
 
     if (!query) {
@@ -4489,7 +4786,9 @@ module.exports = async function webhook(
 
 
     const data =
-      query.data || "";
+      String(
+        query.data || ""
+      );
 
 
     // ======================================
@@ -4499,12 +4798,16 @@ module.exports = async function webhook(
     if (
       data === "home"
     ) {
-      await clearState(chat);
+      await clearState(
+        chat
+      );
 
 
       await sendMessage(
         chat,
+
         "🏠 ГЛАВНОЕ МЕНЮ",
+
         mainKeyboard()
       );
 
@@ -4524,31 +4827,43 @@ module.exports = async function webhook(
     if (
       data === "create"
     ) {
-      await clearState(chat);
+      await clearState(
+        chat
+      );
 
 
       await sendMessage(
         chat,
+
         "🖼 СОЗДАТЬ ИНФОГРАФИКУ\n\n" +
         "Что создаём?",
+
         [
           [
             {
-              text: "👤 Тренеры",
+              text:
+                "👤 Тренеры",
+
               callback_data:
                 "trainer_poster_menu"
             }
           ],
+
           [
             {
-              text: "📅 Общее расписание",
+              text:
+                "📅 Общее расписание",
+
               callback_data:
                 "week"
             }
           ],
+
           [
             {
-              text: "🏠 В меню",
+              text:
+                "🏠 В меню",
+
               callback_data:
                 "home"
             }
@@ -4566,44 +4881,59 @@ module.exports = async function webhook(
 
 
     // ======================================
-    // ВЫБОР КОЛИЧЕСТВА ТРЕНЕРОВ
+    // ВЫБОР 1 / 2 / 3 ТРЕНЕРА
     // ======================================
 
     if (
       data ===
       "trainer_poster_menu"
     ) {
-      await clearState(chat);
+      await clearState(
+        chat
+      );
 
 
       await sendMessage(
         chat,
-        "👤 Сколько тренеров разместить на одном A4?",
+
+        "👤 Сколько тренеров разместить на одном листе A4?",
+
         [
           [
             {
-              text: "1 тренер",
+              text:
+                "1 тренер",
+
               callback_data:
                 "poster_count:1"
             }
           ],
+
           [
             {
-              text: "2 тренера",
+              text:
+                "2 тренера",
+
               callback_data:
                 "poster_count:2"
             }
           ],
+
           [
             {
-              text: "3 тренера",
+              text:
+                "3 тренера",
+
               callback_data:
                 "poster_count:3"
             }
           ],
+
           [
             {
-              text: "⬅️ Назад",
+              text:
+                "⬅️ Назад",
+
               callback_data:
                 "create"
             }
@@ -4621,7 +4951,7 @@ module.exports = async function webhook(
 
 
     // ======================================
-    // КОЛИЧЕСТВО ТРЕНЕРОВ
+    // СОХРАНЯЕМ КОЛИЧЕСТВО
     // ======================================
 
     if (
@@ -4636,8 +4966,13 @@ module.exports = async function webhook(
 
 
       if (
-        ![1, 2, 3]
-          .includes(count)
+        ![
+          1,
+          2,
+          3
+        ].includes(
+          count
+        )
       ) {
         return res
           .status(200)
@@ -4668,7 +5003,9 @@ module.exports = async function webhook(
 
       keyboard.push([
         {
-          text: "⬅️ Назад",
+          text:
+            "⬅️ Назад",
+
           callback_data:
             "trainer_poster_menu"
         }
@@ -4677,11 +5014,11 @@ module.exports = async function webhook(
 
       await sendMessage(
         chat,
-        `Выберите ${count} тренер${
-          count === 1
-            ? "а"
-            : "ов"
-        }:`,
+
+        count === 1
+          ? "Выберите одного тренера:"
+          : `Выберите ${count} тренеров:`,
+
         keyboard
       );
 
@@ -4695,7 +5032,7 @@ module.exports = async function webhook(
 
 
     // ======================================
-    // ВЫБОР ТРЕНЕРА
+    // ВЫБОР КОНКРЕТНОГО ТРЕНЕРА
     // ======================================
 
     if (
@@ -4710,7 +5047,9 @@ module.exports = async function webhook(
 
 
       const state =
-        await getState(chat);
+        await getState(
+          chat
+        );
 
 
       if (
@@ -4720,7 +5059,9 @@ module.exports = async function webhook(
       ) {
         await sendMessage(
           chat,
-          "Выбор устарел. Начните заново.",
+
+          "Выбор устарел. Начните создание инфографики заново.",
+
           mainKeyboard()
         );
 
@@ -4749,8 +5090,15 @@ module.exports = async function webhook(
         )
           ? info.selectedIds
               .map(Number)
+              .filter(
+                Number.isInteger
+              )
           : [];
 
+
+      // ====================================
+      // ПОВТОРНОЕ НАЖАТИЕ — СНЯТЬ ВЫБОР
+      // ====================================
 
       if (
         selectedIds.includes(
@@ -4760,17 +5108,18 @@ module.exports = async function webhook(
         selectedIds =
           selectedIds.filter(
             id =>
-              id !== trainerId
+              id !==
+              trainerId
           );
-      } else {
-        if (
-          selectedIds.length <
-          count
-        ) {
-          selectedIds.push(
-            trainerId
-          );
-        }
+      }
+
+      else if (
+        selectedIds.length <
+        count
+      ) {
+        selectedIds.push(
+          trainerId
+        );
       }
 
 
@@ -4799,7 +5148,9 @@ module.exports = async function webhook(
       ) {
         keyboard.push([
           {
-            text: "➡️ Продолжить",
+            text:
+              "➡️ Продолжить",
+
             callback_data:
               "poster_theme"
           }
@@ -4809,7 +5160,9 @@ module.exports = async function webhook(
 
       keyboard.push([
         {
-          text: "⬅️ Назад",
+          text:
+            "⬅️ Назад",
+
           callback_data:
             "trainer_poster_menu"
         }
@@ -4818,7 +5171,9 @@ module.exports = async function webhook(
 
       await sendMessage(
         chat,
+
         `Выбрано: ${selectedIds.length}/${count}`,
+
         keyboard
       );
 
@@ -4832,7 +5187,7 @@ module.exports = async function webhook(
 
 
     // ======================================
-    // ВЫБОР ТЕМЫ
+    // ВЫБОР ЦВЕТ / ЧБ
     // ======================================
 
     if (
@@ -4840,7 +5195,9 @@ module.exports = async function webhook(
       "poster_theme"
     ) {
       const state =
-        await getState(chat);
+        await getState(
+          chat
+        );
 
 
       if (
@@ -4850,106 +5207,9 @@ module.exports = async function webhook(
       ) {
         await sendMessage(
           chat,
+
           "Выбор устарел.",
-          mainKeyboard()
-        );
 
-
-        return res
-          .status(200)
-          .json({
-            ok: true
-          });
-      }
-
-
-      const info =
-        state.data || {};
-
-
-      if (
-        !Array.isArray(
-          info.selectedIds
-        ) ||
-        info.selectedIds.length !==
-          Number(info.count)
-      ) {
-        await sendMessage(
-          chat,
-          "Сначала выберите нужное количество тренеров."
-        );
-
-
-        return res
-          .status(200)
-          .json({
-            ok: true
-          });
-      }
-
-
-      await sendMessage(
-        chat,
-        "Выберите вариант:",
-        [
-          [
-            {
-              text: "🟧 Цветной",
-              callback_data:
-                "poster_generate:color"
-            },
-            {
-              text: "⬜ Ч/Б",
-              callback_data:
-                "poster_generate:bw"
-            }
-          ],
-          [
-            {
-              text: "🏠 В меню",
-              callback_data:
-                "home"
-            }
-          ]
-        ]
-      );
-
-
-      return res
-        .status(200)
-        .json({
-          ok: true
-        });
-    }
-
-
-    // ======================================
-    // ГЕНЕРАЦИЯ ИНФОГРАФИКИ ТРЕНЕРОВ
-    // ======================================
-
-    if (
-      data.startsWith(
-        "poster_generate:"
-      )
-    ) {
-      const theme =
-        data.split(":")[1] === "bw"
-          ? "bw"
-          : "color";
-
-
-      const state =
-        await getState(chat);
-
-
-      if (
-        !state ||
-        state.action !==
-          "poster_select"
-      ) {
-        await sendMessage(
-          chat,
-          "Выбор устарел.",
           mainKeyboard()
         );
 
@@ -4975,10 +5235,16 @@ module.exports = async function webhook(
           : [];
 
 
-      if (!selectedIds.length) {
+      if (
+        selectedIds.length !==
+        Number(
+          info.count
+        )
+      ) {
         await sendMessage(
           chat,
-          "Тренеры не выбраны."
+
+          "Сначала выберите нужное количество тренеров."
         );
 
 
@@ -4992,6 +5258,148 @@ module.exports = async function webhook(
 
       await sendMessage(
         chat,
+
+        "🎨 Выберите оформление:",
+
+        [
+          [
+            {
+              text:
+                "🟧 Цветной",
+
+              callback_data:
+                "poster_generate:color"
+            },
+
+            {
+              text:
+                "⬜ Ч/Б",
+
+              callback_data:
+                "poster_generate:bw"
+            }
+          ],
+
+          [
+            {
+              text:
+                "🏠 В меню",
+
+              callback_data:
+                "home"
+            }
+          ]
+        ]
+      );
+
+
+      return res
+        .status(200)
+        .json({
+          ok: true
+        });
+    }
+
+
+    // ======================================
+    // ГЕНЕРАЦИЯ ТРЕНЕРОВ
+    // ======================================
+
+    if (
+      data.startsWith(
+        "poster_generate:"
+      )
+    ) {
+      const requestedTheme =
+        data.split(":")[1];
+
+
+      const theme =
+        requestedTheme === "bw"
+          ? "bw"
+          : "color";
+
+
+      const state =
+        await getState(
+          chat
+        );
+
+
+      if (
+        !state ||
+        state.action !==
+          "poster_select"
+      ) {
+        await sendMessage(
+          chat,
+
+          "Выбор устарел.",
+
+          mainKeyboard()
+        );
+
+
+        return res
+          .status(200)
+          .json({
+            ok: true
+          });
+      }
+
+
+      const info =
+        state.data || {};
+
+
+      const selectedIds =
+        Array.isArray(
+          info.selectedIds
+        )
+          ? info.selectedIds
+              .map(Number)
+              .filter(
+                Number.isInteger
+              )
+          : [];
+
+
+      if (
+        selectedIds.length !==
+        Number(
+          info.count
+        )
+      ) {
+        await sendMessage(
+          chat,
+
+          "Тренеры выбраны неправильно. Попробуйте ещё раз.",
+
+          [
+            [
+              {
+                text:
+                  "👤 Выбрать заново",
+
+                callback_data:
+                  "trainer_poster_menu"
+              }
+            ]
+          ]
+        );
+
+
+        return res
+          .status(200)
+          .json({
+            ok: true
+          });
+      }
+
+
+      await sendMessage(
+        chat,
+
         "⏳ Готовлю инфографику…"
       );
 
@@ -5003,23 +5411,32 @@ module.exports = async function webhook(
       );
 
 
-      await clearState(chat);
+      await clearState(
+        chat
+      );
 
 
       await sendMessage(
         chat,
+
         "✅ Инфографика готова.",
+
         [
           [
             {
-              text: "🖼 Создать ещё",
+              text:
+                "🖼 Создать ещё",
+
               callback_data:
                 "trainer_poster_menu"
             }
           ],
+
           [
             {
-              text: "🏠 В меню",
+              text:
+                "🏠 В меню",
+
               callback_data:
                 "home"
             }
@@ -5041,31 +5458,42 @@ module.exports = async function webhook(
     // ======================================
 
     if (
-      data === "trainers"
+      data ===
+      "trainers"
     ) {
       const trainers =
         await getTrainers();
 
 
-      const text =
+      const trainerText =
         trainers.length
           ? trainers
               .map(
                 trainer =>
                   `👤 ${trainer.name}\n` +
-                  `📞 ${trainer.phone || "—"}`
+                  `📞 ${
+                    trainer.phone ||
+                    "—"
+                  }`
               )
-              .join("\n\n")
+              .join(
+                "\n\n"
+              )
           : "Тренеры пока не добавлены.";
 
 
       await sendMessage(
         chat,
-        `👤 ТРЕНЕРЫ «ТИТАН»\n\n${text}`,
+
+        "👤 ТРЕНЕРЫ «ТИТАН»\n\n" +
+        trainerText,
+
         [
           [
             {
-              text: "🏠 В меню",
+              text:
+                "🏠 В меню",
+
               callback_data:
                 "home"
             }
@@ -5083,13 +5511,15 @@ module.exports = async function webhook(
 
 
     // ======================================
-    // АДМИН
+    // ADMIN
     // ======================================
 
     if (
       data === "admin"
     ) {
-      await showAdmin(chat);
+      await showAdmin(
+        chat
+      );
 
 
       return res
@@ -5101,7 +5531,7 @@ module.exports = async function webhook(
 
 
     // ======================================
-    // СПИСОК ТРЕНЕРОВ В АДМИНКЕ
+    // СПИСОК ТРЕНЕРОВ В ADMIN
     // ======================================
 
     if (
@@ -5116,7 +5546,9 @@ module.exports = async function webhook(
 
       await sendMessage(
         chat,
+
         "👤 Выберите тренера:",
+
         keyboard
       );
 
@@ -5182,6 +5614,7 @@ module.exports = async function webhook(
 
       await sendMessage(
         chat,
+
         "Введите новое имя тренера:"
       );
 
@@ -5218,6 +5651,7 @@ module.exports = async function webhook(
 
       await sendMessage(
         chat,
+
         "Введите новый телефон:"
       );
 
@@ -5246,6 +5680,7 @@ module.exports = async function webhook(
 
       await sendMessage(
         chat,
+
         "Введите имя нового тренера:"
       );
 
@@ -5317,7 +5752,7 @@ module.exports = async function webhook(
 
 
     // ======================================
-    // ИЗМЕНИТЬ ДЕНЬ
+    // ДЕНЬ
     // ======================================
 
     if (
@@ -5341,7 +5776,8 @@ module.exports = async function webhook(
 
       await sendMessage(
         chat,
-        "Введите новый день:\n" +
+
+        "Введите новый день:\n\n" +
         "ПН, ВТ, СР, ЧТ, ПТ, СБ или ВС"
       );
 
@@ -5355,7 +5791,7 @@ module.exports = async function webhook(
 
 
     // ======================================
-    // ИЗМЕНИТЬ ВРЕМЯ
+    // ВРЕМЯ
     // ======================================
 
     if (
@@ -5379,7 +5815,9 @@ module.exports = async function webhook(
 
       await sendMessage(
         chat,
-        "Введите новое время:"
+
+        "Введите новое время.\n\n" +
+        "Например: 18:00"
       );
 
 
@@ -5392,7 +5830,7 @@ module.exports = async function webhook(
 
 
     // ======================================
-    // ИЗМЕНИТЬ НАПРАВЛЕНИЕ
+    // НАПРАВЛЕНИЕ ЗАНЯТИЯ
     // ======================================
 
     if (
@@ -5416,6 +5854,7 @@ module.exports = async function webhook(
 
       await sendMessage(
         chat,
+
         "Введите новое направление:"
       );
 
@@ -5429,7 +5868,7 @@ module.exports = async function webhook(
 
 
     // ======================================
-    // ИЗМЕНИТЬ ЗАЛ
+    // ЗАЛ
     // ======================================
 
     if (
@@ -5453,7 +5892,12 @@ module.exports = async function webhook(
 
       await sendMessage(
         chat,
-        "Введите 1, 2, 3, 5\n" +
+
+        "Введите зал:\n\n" +
+        "1 — Кроссфит / бокс\n" +
+        "2 — TRX / антигравити\n" +
+        "3 — Силовой тренинг\n" +
+        "5 — Йога / аэройога\n" +
         "или «Тренажерный зал»"
       );
 
@@ -5484,8 +5928,12 @@ module.exports = async function webhook(
       const rows =
         await sql`
           DELETE FROM schedule
-          WHERE id = ${lessonId}
-          RETURNING trainer_id
+
+          WHERE id =
+            ${lessonId}
+
+          RETURNING
+            trainer_id
         `;
 
 
@@ -5494,6 +5942,7 @@ module.exports = async function webhook(
       ) {
         await sendMessage(
           chat,
+
           "✅ Занятие удалено."
         );
 
@@ -5537,7 +5986,8 @@ module.exports = async function webhook(
 
       await sendMessage(
         chat,
-        "Введите день:\n" +
+
+        "Введите день занятия:\n\n" +
         "ПН, ВТ, СР, ЧТ, ПТ, СБ или ВС"
       );
 
@@ -5633,6 +6083,7 @@ module.exports = async function webhook(
 
       await sendMessage(
         chat,
+
         "Введите новое название направления:"
       );
 
@@ -5646,7 +6097,7 @@ module.exports = async function webhook(
 
 
     // ======================================
-    // ИЗМЕНИТЬ ОПИСАНИЕ
+    // ИЗМЕНИТЬ ОПИСАНИЕ НАПРАВЛЕНИЯ
     // ======================================
 
     if (
@@ -5670,7 +6121,8 @@ module.exports = async function webhook(
 
       await sendMessage(
         chat,
-        "Введите новое описание:"
+
+        "Введите новое описание направления:"
       );
 
 
@@ -5700,8 +6152,12 @@ module.exports = async function webhook(
       const rows =
         await sql`
           DELETE FROM directions
-          WHERE id = ${directionId}
-          RETURNING trainer_id
+
+          WHERE id =
+            ${directionId}
+
+          RETURNING
+            trainer_id
         `;
 
 
@@ -5710,6 +6166,7 @@ module.exports = async function webhook(
       ) {
         await sendMessage(
           chat,
+
           "✅ Направление удалено."
         );
 
@@ -5753,6 +6210,7 @@ module.exports = async function webhook(
 
       await sendMessage(
         chat,
+
         "Введите название нового направления:"
       );
 
@@ -5766,7 +6224,7 @@ module.exports = async function webhook(
 
 
     // ======================================
-    // ОБЩЕЕ РАСПИСАНИЕ
+    // ОБЩЕЕ РАСПИСАНИЕ — ВЫБОР ТЕМЫ
     // ======================================
 
     if (
@@ -5774,23 +6232,34 @@ module.exports = async function webhook(
     ) {
       await sendMessage(
         chat,
-        "📅 Выберите вариант общего расписания:",
+
+        "📅 ОБЩЕЕ РАСПИСАНИЕ\n\n" +
+        "Выберите оформление:",
+
         [
           [
             {
-              text: "🟧 Цветное",
+              text:
+                "🟧 Цветное",
+
               callback_data:
                 "week_color"
             },
+
             {
-              text: "⬜ Ч/Б",
+              text:
+                "⬜ Ч/Б",
+
               callback_data:
                 "week_bw"
             }
           ],
+
           [
             {
-              text: "🏠 В меню",
+              text:
+                "🏠 В меню",
+
               callback_data:
                 "home"
             }
@@ -5807,12 +6276,17 @@ module.exports = async function webhook(
     }
 
 
+    // ======================================
+    // ОБЩЕЕ РАСПИСАНИЕ — ЦВЕТ
+    // ======================================
+
     if (
       data ===
       "week_color"
     ) {
       await sendMessage(
         chat,
+
         "⏳ Готовлю общее расписание…"
       );
 
@@ -5825,11 +6299,25 @@ module.exports = async function webhook(
 
       await sendMessage(
         chat,
+
         "✅ Общее расписание готово.",
+
         [
           [
             {
-              text: "🏠 В меню",
+              text:
+                "📅 Создать ещё",
+
+              callback_data:
+                "week"
+            }
+          ],
+
+          [
+            {
+              text:
+                "🏠 В меню",
+
               callback_data:
                 "home"
             }
@@ -5846,12 +6334,17 @@ module.exports = async function webhook(
     }
 
 
+    // ======================================
+    // ОБЩЕЕ РАСПИСАНИЕ — ЧБ
+    // ======================================
+
     if (
       data ===
       "week_bw"
     ) {
       await sendMessage(
         chat,
+
         "⏳ Готовлю общее расписание…"
       );
 
@@ -5864,11 +6357,25 @@ module.exports = async function webhook(
 
       await sendMessage(
         chat,
+
         "✅ Общее расписание готово.",
+
         [
           [
             {
-              text: "🏠 В меню",
+              text:
+                "📅 Создать ещё",
+
+              callback_data:
+                "week"
+            }
+          ],
+
+          [
+            {
+              text:
+                "🏠 В меню",
+
               callback_data:
                 "home"
             }
@@ -5886,12 +6393,14 @@ module.exports = async function webhook(
 
 
     // ======================================
-    // НЕИЗВЕСТНАЯ КНОПКА
+    // НЕИЗВЕСТНЫЙ CALLBACK
     // ======================================
 
     await sendMessage(
       chat,
+
       "Выберите действие:",
+
       mainKeyboard()
     );
 
@@ -5911,9 +6420,9 @@ module.exports = async function webhook(
     );
 
 
-    // Важно: возвращаем 200,
-    // чтобы Telegram не отправлял
-    // одно и то же обновление повторно.
+    // Telegram должен получить 200,
+    // чтобы не гонять одно обновление
+    // повторно при внутренней ошибке.
 
     return res
       .status(200)
