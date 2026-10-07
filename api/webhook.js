@@ -585,6 +585,24 @@ async function trainerKeyboard(prefix) {
 
   return keyboard;
 }
+  async function trainerSelectionKeyboard(
+  prefix,
+  selectedIds = []
+) {
+  const trainers = await getTrainers();
+
+  return trainers.map(t => {
+    const selected =
+      selectedIds.includes(Number(t.id));
+
+    return [
+      {
+        text: `${selected ? "✅ " : ""}${t.name}`,
+        callback_data: `${prefix}:${t.id}`
+      }
+    ];
+  });
+}
 
 // ==========================================
 // АДМИН-МЕНЮ
