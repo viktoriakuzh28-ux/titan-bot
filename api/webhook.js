@@ -1327,6 +1327,528 @@ function svgLines(lines, x, y, size, color, weight, gap) {
     >${esc(line)}</text>
   `).join("");
 }
+function makePoster(t, theme = "color", trainerNumber = 1) {
+  const bw = theme === "bw";
+
+  const C = {
+    bg: bw ? "#ffffff" : "#0b0d10",
+    panel: bw ? "#f7f7f7" : "#12161c",
+    panel2: bw ? "#fcfcfc" : "#171c23",
+    text: bw ? "#111111" : "#f5f7fa",
+    muted: bw ? "#666666" : "#a4acb8",
+    accent: bw ? "#000000" : "#d98a29",
+    accentSoft: bw ? "#2a2a2a" : "#ffb156",
+    line: bw ? "#d8d8d8" : "#2b323c",
+    ghost: bw ? "#eeeeee" : "#1a1f27"
+  };
+
+  const W = 1240;
+  const H = 1754;
+  const PAD = 60;
+  const INNER = W - PAD * 2;
+
+  const dayOrder = {
+    "ПН": 1,
+    "ВТ": 2,
+    "СР": 3,
+    "ЧТ": 4,
+    "ПТ": 5,
+    "СБ": 6,
+    "ВС": 7
+  };
+
+  function firstTimeToMinutes(v) {
+    const m = String(v || "").match(/(\d{1,2}):(\d{2})/);
+    if (!m) return 9999;
+    return Number(m[1]) * 60 + Number(m[2]);
+  }
+
+  const lessons = [...(t.schedule || [])].sort((a, b) => {
+    const da = dayOrder[a.day] || 99;
+    const db = dayOrder[b.day] || 99;
+    if (da !== db) return da - db;
+    return firstTimeToMinutes(a.time) - firstTimeToMinutes(b.time);
+  });
+
+  const directions = (t.directions && t.directions.length)
+    ? t.directions
+    : [
+        {
+          name: "Направления",
+          description: "Добавьте направления через управление данными."
+        }
+      ];
+
+  const preparedDirections = directions.map(d => {
+    const lines = splitText(d.description || "", 52).slice(0, 2);
+    return {
+      name: d.name,
+      lines,
+      height: lines.length > 1 ? 122 : 106
+    };
+  });
+
+  let dirY = 392;
+
+  const directionSvg = preparedDirections.map((d, i) => {
+    const y = dirY;
+    dirY += d.height + 18;
+
+    return `
+      <g>
+        <rect
+          x="${PAD + 28}"
+          y="${y}"
+          width="${INNER - 56}"
+          height="${d.height}"
+          rx="18"
+          fill="${i % 2 === 0 ? C.panel : C.panel2}"
+          stroke="${C.line}"
+          stroke-width="2"
+        />
+
+        <rect
+          x="${PAD + 28}"
+          y="${y}"
+          width="8"
+          height="${d.height}"
+          rx="4"
+          fill="${C.accent}"
+        />
+
+        <text
+          x="${PAD + 52}"
+          y="${y + 36}"
+          fill="${C.accent}"
+          font-family="Arial, Helvetica, sans-serif"
+          font-size="28"
+          font-weight="900"
+        >${esc(String(d.name).toUpperCase())}</text>
+
+        ${svgLines(
+          d.lines,
+          PAD + 52,
+          y + 72,
+          24,
+          C.text,
+          700,
+          29
+        )}
+      </g>
+    `;
+  }).join("");
+
+  const scheduleTitleY = Math.max(790, dirY + 44);
+  const scheduleTopY = scheduleTitleY + 44;
+  const scheduleHeadY = scheduleTopY + 48;
+
+  const rowH =
+    lessons.length <= 2 ? 108 :
+    lessons.length <= 4 ? 92 :
+    lessons.length <= 6 ? 80 :
+    72;
+
+  const scheduleStartY = scheduleHeadY + 18;
+
+  const scheduleSvg = lessons.length
+    ? lessons.map((s, i) => {
+        const y = scheduleStartY + i * rowH;
+
+        const hallText =
+          s.hall === "GYM"
+            ? "ТРЕНАЖЁРНЫЙ"
+            : `ЗАЛ ${s.hall}`;
+
+        return `
+          <g>
+            <rect
+              x="${PAD + 28}"
+              y="${y}"
+              width="${INNER - 56}"
+              height="${rowH - 10}"
+              rx="14"
+              fill="${i % 2 === 0 ? C.panel2 : C.panel}"
+              stroke="${C.line}"
+              stroke-width="1.5"
+            />
+
+            <text
+              x="${PAD + 52}"
+              y="${y + 43}"
+              fill="${C.accent}"
+              font-family="Arial, Helvetica, sans-serif"
+              font-size="28"
+              font-weight="900"
+            >${esc(s.day)}</text>
+
+            <text
+              x="${PAD + 160}"
+              y="${y + 43}"
+              fill="${C.text}"
+              font-family="Arial, Helvetica, sans-serif"
+              font-size="28"
+              font-weight="900"
+            >${esc(s.time)}</text>
+
+            <text
+              x="${PAD + 360}"
+              y="${y + 43}"
+              fill="${C.text}"
+              font-family="Arial, Helvetica, sans-serif"
+              font-size="25"
+              font-weight="800"
+            >${esc(s.direction)}</text>
+
+            <text
+              x="${W - PAD - 52}"
+              y="${y + 43}"
+              text-anchor="end"
+              fill="${C.accent}"
+              font-family="Arial, Helvetica, sans-serif"
+              font-size="24"
+              font-weight="900"
+            >${esc(hallText)}</text>
+          </g>
+        `;
+      }).join("")
+    : `
+      <rect
+        x="${PAD + 28}"
+        y="${scheduleStartY}"
+        width="${INNER - 56}"
+        height="88"
+        rx="14"
+        fill="${C.panel2}"
+        stroke="${C.line}"
+        stroke-width="1.5"
+      />
+      <text
+        x="${PAD + 52}"
+        y="${scheduleStartY + 52}"
+        fill="${C.muted}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="24"
+        font-weight="700"
+      >Расписание пока не заполнено</text>
+    `;
+
+  const scheduleBottomY = lessons.length
+    ? scheduleStartY + lessons.length * rowH
+    : scheduleStartY + 100;
+
+  const legendKeys = ["1", "2", "3", "5"];
+  if (lessons.some(x => x.hall === "GYM")) {
+    legendKeys.push("GYM");
+  }
+
+  const hallLegend = {
+    "1": "КРОССФИТ / БОКС",
+    "2": "TRX / АНТИГРАВИТИ",
+    "3": "СИЛОВОЙ ТРЕНИНГ",
+    "5": "ЙОГА / АЭРОЙОГА",
+    "GYM": "ТРЕНАЖЁРНЫЙ ЗАЛ"
+  };
+
+  const legendY = scheduleBottomY + 70;
+
+  const legendSvg = legendKeys.map((hall, i) => {
+    const col = i % 2;
+    const row = Math.floor(i / 2);
+
+    const x = PAD + 28 + col * 545;
+    const y = legendY + row * 92;
+
+    return `
+      <g>
+        <rect
+          x="${x}"
+          y="${y}"
+          width="510"
+          height="72"
+          rx="14"
+          fill="${row % 2 === 0 ? C.panel : C.panel2}"
+          stroke="${C.line}"
+          stroke-width="1.5"
+        />
+
+        <text
+          x="${x + 24}"
+          y="${y + 31}"
+          fill="${C.accent}"
+          font-family="Arial, Helvetica, sans-serif"
+          font-size="22"
+          font-weight="900"
+        >${hall === "GYM" ? "GYM" : `ЗАЛ ${hall}`}</text>
+
+        <text
+          x="${x + 24}"
+          y="${y + 56}"
+          fill="${C.text}"
+          font-family="Arial, Helvetica, sans-serif"
+          font-size="18"
+          font-weight="800"
+        >${esc(hallLegend[hall] || "")}</text>
+      </g>
+    `;
+  }).join("");
+
+  const footerLineY = H - 78;
+
+  return `
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="${W}"
+      height="${H}"
+      viewBox="0 0 ${W} ${H}"
+    >
+      <rect width="${W}" height="${H}" fill="${C.bg}" />
+
+      <!-- Верхняя акцентная линия -->
+      <rect
+        x="0"
+        y="0"
+        width="${W}"
+        height="14"
+        fill="${C.accent}"
+      />
+
+      <!-- Фоновая надпись -->
+      <text
+        x="${W - 80}"
+        y="175"
+        text-anchor="end"
+        fill="${C.ghost}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="92"
+        font-weight="900"
+      >ТИТАН</text>
+
+      <!-- Шапка -->
+      <text
+        x="${PAD}"
+        y="72"
+        fill="${C.accent}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="48"
+        font-weight="900"
+      >ТИТАН</text>
+
+      <text
+        x="${W - PAD}"
+        y="70"
+        text-anchor="end"
+        fill="${C.muted}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="18"
+        font-weight="800"
+        letter-spacing="2"
+      >СПОРТИВНЫЙ КЛУБ · САРАПУЛ</text>
+
+      <line
+        x1="${PAD}"
+        y1="92"
+        x2="${W - PAD}"
+        y2="92"
+        stroke="${C.accent}"
+        stroke-width="4"
+      />
+
+      <text
+        x="${PAD}"
+        y="148"
+        fill="${C.text}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="34"
+        font-weight="900"
+      >ТРЕНЕРЫ «ТИТАН»</text>
+
+      <text
+        x="${PAD}"
+        y="186"
+        fill="${C.muted}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="20"
+        font-weight="800"
+        letter-spacing="2"
+      >АКТУАЛЬНОЕ РАСПИСАНИЕ</text>
+
+      <!-- Основная карточка -->
+      <rect
+        x="${PAD}"
+        y="220"
+        width="${INNER}"
+        height="${H - 360}"
+        rx="26"
+        fill="${C.panel}"
+        stroke="${C.line}"
+        stroke-width="2"
+      />
+
+      <rect
+        x="${PAD}"
+        y="220"
+        width="10"
+        height="${H - 360}"
+        rx="5"
+        fill="${C.accent}"
+      />
+
+      <!-- Номер -->
+      <text
+        x="${PAD + 28}"
+        y="286"
+        fill="${C.accent}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="28"
+        font-weight="900"
+      >${String(trainerNumber).padStart(2, "0")}</text>
+
+      <!-- Имя -->
+      <text
+        x="${PAD + 78}"
+        y="286"
+        fill="${C.text}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="46"
+        font-weight="900"
+      >${esc(String(t.name || "").toUpperCase())}</text>
+
+      <!-- Телефон -->
+      <text
+        x="${W - PAD - 28}"
+        y="286"
+        text-anchor="end"
+        fill="${C.accentSoft}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="30"
+        font-weight="900"
+      >${esc(t.phone || "")}</text>
+
+      <line
+        x1="${PAD + 28}"
+        y1="314"
+        x2="${W - PAD - 28}"
+        y2="314"
+        stroke="${C.line}"
+        stroke-width="2"
+      />
+
+      <!-- НАПРАВЛЕНИЯ -->
+      <text
+        x="${PAD + 28}"
+        y="360"
+        fill="${C.muted}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="18"
+        font-weight="900"
+        letter-spacing="2"
+      >НАПРАВЛЕНИЯ</text>
+
+      ${directionSvg}
+
+      <!-- РАСПИСАНИЕ -->
+      <text
+        x="${PAD + 28}"
+        y="${scheduleTitleY}"
+        fill="${C.muted}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="18"
+        font-weight="900"
+        letter-spacing="2"
+      >РАСПИСАНИЕ</text>
+
+      <rect
+        x="${PAD + 28}"
+        y="${scheduleTopY}"
+        width="${INNER - 56}"
+        height="38"
+        rx="10"
+        fill="${C.accent}"
+      />
+
+      <text
+        x="${PAD + 52}"
+        y="${scheduleHeadY}"
+        fill="${bw ? "#ffffff" : "#111111"}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="18"
+        font-weight="900"
+      >ДЕНЬ</text>
+
+      <text
+        x="${PAD + 160}"
+        y="${scheduleHeadY}"
+        fill="${bw ? "#ffffff" : "#111111"}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="18"
+        font-weight="900"
+      >ВРЕМЯ</text>
+
+      <text
+        x="${PAD + 360}"
+        y="${scheduleHeadY}"
+        fill="${bw ? "#ffffff" : "#111111"}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="18"
+        font-weight="900"
+      >НАПРАВЛЕНИЕ</text>
+
+      <text
+        x="${W - PAD - 52}"
+        y="${scheduleHeadY}"
+        text-anchor="end"
+        fill="${bw ? "#ffffff" : "#111111"}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="18"
+        font-weight="900"
+      >ЗАЛ</text>
+
+      ${scheduleSvg}
+
+      <!-- ЛЕГЕНДА ЗАЛОВ -->
+      <text
+        x="${PAD + 28}"
+        y="${legendY - 22}"
+        fill="${C.muted}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="18"
+        font-weight="900"
+        letter-spacing="2"
+      >ЗАЛЫ «ТИТАН»</text>
+
+      ${legendSvg}
+
+      <!-- Адрес -->
+      <text
+        x="${PAD}"
+        y="${H - 102}"
+        fill="${C.muted}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="20"
+        font-weight="800"
+      >г. Сарапул · ул. Советская, 46</text>
+
+      <text
+        x="${W - PAD}"
+        y="${H - 102}"
+        text-anchor="end"
+        fill="${C.accent}"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="22"
+        font-weight="900"
+      >ТИТАН · САРАПУЛ</text>
+
+      <line
+        x1="${PAD}"
+        y1="${footerLineY}"
+        x2="${W - PAD}"
+        y2="${footerLineY}"
+        stroke="${C.accent}"
+        stroke-width="5"
+      />
+    </svg>
+  `;
+}
 
 // ==========================================
 // ИНФОГРАФИКА ТРЕНЕРОВ — 1 / 2 / 3
@@ -1336,6 +1858,16 @@ function makeMultiTrainerPoster(
   trainers,
   theme = "color"
 ) {
+    if (
+    Array.isArray(trainers) &&
+    trainers.length === 1
+  ) {
+    return makePoster(
+      trainers[0],
+      theme,
+      1
+    );
+  }
   const bw = theme === "bw";
 
   const C = {
