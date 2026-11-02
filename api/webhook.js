@@ -4,7 +4,7 @@
 // БАЗА · СОСТОЯНИЯ · АДМИНКА · ТРЕНЕРЫ
 // ============================================================
 
-const { neon } = require("@neondatabase/serverless");
+con { neon } = require("@neondatabase/serverless");
 const QRCode = require("qrcode");
 
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
