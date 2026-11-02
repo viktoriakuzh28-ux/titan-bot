@@ -4,7 +4,7 @@
 // БАЗА · СОСТОЯНИЯ · АДМИНКА · ТРЕНЕРЫ
 // ============================================================
 
-con { neon } = require("@neondatabase/serverless");
+const { neon } = require("@neondatabase/serverless");
 const QRCode = require("qrcode");
 
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
@@ -94,7 +94,7 @@ function esc(value) {
 // БАЗА ДАННЫХ
 // ============================================================
 
-async function initDatabase() {
+async function initDatabase() {api in
 
   // ----------------------------------------------------------
   // ТРЕНЕРЫ
