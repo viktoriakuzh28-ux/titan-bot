@@ -94,19 +94,13 @@ function esc(value) {
 // БАЗА ДАННЫХ
 // ============================================================
 
-async function initDatabase() {api in
+async function initDatabase() {
 
   // ----------------------------------------------------------
   // ТРЕНЕРЫ
   // ----------------------------------------------------------
 
-  await sql`
-    CREATE TABLE IF NOT EXISTS trainers (
-      id SERIAL PRIMARY KEY,
-      name TEXT NOT NULL,
-      phone TEXT DEFAULT '',
-      qr_url TEXT DEFAULT '',
-      sort_order INTEGER DEFAULT 0
+  
     )
   `;
 
